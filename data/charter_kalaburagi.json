@@ -1,0 +1,286 @@
+{
+  "label": "Sample follow-up timelines for the Solvathon 2026 demo (Kalaburagi district). Set by the project team, not an official citizen's charter. Each department must replace them with its own rules before real use.",
+  "district_head_label": "DC Office (District Head Office)",
+  "fields": {
+    "water": "Drinking water",
+    "roads": "Roads and streetlights",
+    "health": "Health and hospitals",
+    "sanitation": "Sanitation, drains and local taxes",
+    "police": "Police (pilot)",
+    "general": "General grievances"
+  },
+  "stage_order": [
+    "depot",
+    "deputy_ae",
+    "area_engineer",
+    "superintendent_engineer"
+  ],
+  "stage_labels": {
+    "depot": "Section or station-level officer",
+    "deputy_ae": "Sub-division officer",
+    "area_engineer": "Division officer",
+    "superintendent_engineer": "District-level department head",
+    "chief_engineer": "DC Office (District Head Office)"
+  },
+  "ward_office_label": "Ward or taluk office",
+  "escalation_rule": "Sample rule: each level has its own number of days (they are not added up). After the last level the complaint goes to the DC Office. A department replaces this with its own rule.",
+  "after_last_level": "If it is still not solved, the complaint goes to the DC Office (District Head Office).",
+  "escalation_note": "In this sample each level has its own number of days. The department sets the real days.",
+  "reply_banner": "DRAFT - NOT SENT - NOT AN OFFICIAL GOVERNMENT REPLY - FOR REVIEW BY THE DEPARTMENT BEFORE ANY USE",
+  "classifier_intro": "You classify a citizen's grievance for the Kalaburagi district administration (English or Kannada).",
+  "owners": {
+    "water_section": "Drinking water section office",
+    "roads_section": "Roads and streetlights section office",
+    "health_unit": "Hospital administration (taluk or district hospital)",
+    "sanitation_section": "Local body sanitation section (City Corporation, town or gram panchayat)",
+    "police_station": "Police station (station-level officer)",
+    "grievance_cell": "District Grievance Cell, DC Office"
+  },
+  "helplines": {
+    "complaint_cell_24x7": "112",
+    "toll_free": "112",
+    "cyber_crime": "1930"
+  },
+  "helpline_text": "In an emergency call 112. For online financial fraud also call the national cybercrime helpline 1930 as soon as possible.",
+  "escalation_matrix": {
+    "standard": {
+      "depot": 2,
+      "deputy_ae": 2,
+      "area_engineer": 2,
+      "superintendent_engineer": 2
+    },
+    "police": {
+      "depot": 1,
+      "deputy_ae": 2,
+      "area_engineer": 2,
+      "superintendent_engineer": 2
+    },
+    "health": {
+      "depot": 2,
+      "deputy_ae": 1,
+      "area_engineer": 1,
+      "superintendent_engineer": 1
+    }
+  },
+  "complaint_types": {
+    "no_water_supply": {
+      "label": "No drinking water supply",
+      "field": "water",
+      "owner": "water_section",
+      "escalation_key": "standard",
+      "fix_days": 2,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "water_leakage": {
+      "label": "Water pipe leakage",
+      "field": "water",
+      "owner": "water_section",
+      "escalation_key": "standard",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "water_pollution": {
+      "label": "Dirty or contaminated water",
+      "field": "water",
+      "owner": "water_section",
+      "escalation_key": "standard",
+      "fix_days": 1,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "handpump_repair": {
+      "label": "Hand pump or borewell repair",
+      "field": "water",
+      "owner": "water_section",
+      "escalation_key": "standard",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "road_damage": {
+      "label": "Damaged road or pothole",
+      "field": "roads",
+      "owner": "roads_section",
+      "escalation_key": "standard",
+      "fix_days": 7,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "streetlight_fault": {
+      "label": "Streetlight not working",
+      "field": "roads",
+      "owner": "roads_section",
+      "escalation_key": "standard",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "hospital_service": {
+      "label": "Hospital service problem",
+      "field": "health",
+      "owner": "health_unit",
+      "escalation_key": "health",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "garbage_sanitation": {
+      "label": "Garbage and sanitation",
+      "field": "sanitation",
+      "owner": "sanitation_section",
+      "escalation_key": "standard",
+      "fix_days": 2,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "drainage_blockage": {
+      "label": "Blocked drain or sewer",
+      "field": "sanitation",
+      "owner": "sanitation_section",
+      "escalation_key": "standard",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "property_tax_billing": {
+      "label": "Tax, bill or charges",
+      "field": "sanitation",
+      "owner": "sanitation_section",
+      "escalation_key": "standard",
+      "fix_days": 7,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    },
+    "cybercrime": {
+      "label": "Cybercrime and online fraud",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 1,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "financial_fraud": {
+      "label": "Financial fraud",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 1,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "lost_property": {
+      "label": "Lost property",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "traffic_safety": {
+      "label": "Public safety and traffic",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 2,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "complaint_individuals": {
+      "label": "Complaint involving individuals",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "general_grievance": {
+      "label": "General grievance",
+      "field": "general",
+      "owner": "grievance_cell",
+      "escalation_key": "standard",
+      "fix_days": 7,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Solvathon 2026 demo."
+    }
+  },
+  "state": "Karnataka",
+  "category_types": {
+    "water_supply": [
+      "no_water_supply",
+      "water_leakage",
+      "water_pollution",
+      "handpump_repair"
+    ],
+    "drainage_sewerage": [
+      "drainage_blockage"
+    ],
+    "garbage_sanitation": [
+      "garbage_sanitation"
+    ],
+    "roads_footpaths": [
+      "road_damage"
+    ],
+    "streetlights": [
+      "streetlight_fault"
+    ],
+    "flooding_waterlogging": [
+      "drainage_blockage"
+    ],
+    "public_health_strays": [
+      "hospital_service",
+      "garbage_sanitation"
+    ],
+    "municipal_services_taxes": [
+      "property_tax_billing"
+    ]
+  },
+  "category_types_note": "When the citizen picks one of these not-emergency categories, the type is chosen from the listed types. If the text matches one of them it is used; otherwise the first one is.",
+  "kannada_names": {
+    "No drinking water supply": "ಕುಡಿಯುವ ನೀರು ಪೂರೈಕೆ ಇಲ್ಲ",
+    "Water pipe leakage": "ನೀರಿನ ಪೈಪ್ ಸೋರಿಕೆ",
+    "Dirty or contaminated water": "ಕೊಳಕು ಅಥವಾ ಕಲುಷಿತ ನೀರು",
+    "Hand pump or borewell repair": "ಕೈಪಂಪ್ ಅಥವಾ ಕೊಳವೆ ಬಾವಿ ದುರಸ್ತಿ",
+    "Damaged road or pothole": "ಹಾಳಾದ ರಸ್ತೆ ಅಥವಾ ಗುಂಡಿ",
+    "Streetlight not working": "ಬೀದಿ ದೀಪ ಕೆಲಸ ಮಾಡುತ್ತಿಲ್ಲ",
+    "Hospital service problem": "ಆಸ್ಪತ್ರೆ ಸೇವೆಯ ಸಮಸ್ಯೆ",
+    "Garbage and sanitation": "ಕಸ ಮತ್ತು ನೈರ್ಮಲ್ಯ",
+    "Blocked drain or sewer": "ಕಟ್ಟಿಕೊಂಡ ಚರಂಡಿ ಅಥವಾ ಒಳಚರಂಡಿ",
+    "Tax, bill or charges": "ತೆರಿಗೆ, ಬಿಲ್ ಅಥವಾ ಶುಲ್ಕ",
+    "Cybercrime and online fraud": "ಸೈಬರ್ ಅಪರಾಧ ಮತ್ತು ಆನ್‌ಲೈನ್ ವಂಚನೆ",
+    "Financial fraud": "ಹಣಕಾಸು ವಂಚನೆ",
+    "Lost property": "ಕಳೆದುಹೋದ ವಸ್ತು",
+    "Public safety and traffic": "ಸಾರ್ವಜನಿಕ ಸುರಕ್ಷತೆ ಮತ್ತು ಸಂಚಾರ",
+    "Complaint involving individuals": "ವ್ಯಕ್ತಿಗಳಿಗೆ ಸಂಬಂಧಿಸಿದ ದೂರು",
+    "General grievance": "ಸಾಮಾನ್ಯ ದೂರು",
+    "Drinking water": "ಕುಡಿಯುವ ನೀರು",
+    "Roads and streetlights": "ರಸ್ತೆ ಮತ್ತು ಬೀದಿ ದೀಪಗಳು",
+    "Health and hospitals": "ಆರೋಗ್ಯ ಮತ್ತು ಆಸ್ಪತ್ರೆಗಳು",
+    "Sanitation, drains and local taxes": "ನೈರ್ಮಲ್ಯ, ಚರಂಡಿ ಮತ್ತು ಸ್ಥಳೀಯ ತೆರಿಗೆ",
+    "Police (pilot)": "ಪೊಲೀಸ್ (ಪೈಲಟ್)",
+    "General grievances": "ಸಾಮಾನ್ಯ ಕುಂದುಕೊರತೆಗಳು",
+    "Drinking water section office": "ಕುಡಿಯುವ ನೀರು ವಿಭಾಗ ಕಚೇರಿ",
+    "Roads and streetlights section office": "ರಸ್ತೆ ಮತ್ತು ಬೀದಿ ದೀಪ ವಿಭಾಗ ಕಚೇರಿ",
+    "Hospital administration (taluk or district hospital)": "ಆಸ್ಪತ್ರೆ ಆಡಳಿತ (ತಾಲೂಕು ಅಥವಾ ಜಿಲ್ಲಾ ಆಸ್ಪತ್ರೆ)",
+    "Local body sanitation section (City Corporation, town or gram panchayat)": "ಸ್ಥಳೀಯ ಸಂಸ್ಥೆಯ ನೈರ್ಮಲ್ಯ ವಿಭಾಗ (ಮಹಾನಗರ ಪಾಲಿಕೆ, ಪಟ್ಟಣ ಅಥವಾ ಗ್ರಾಮ ಪಂಚಾಯಿತಿ)",
+    "Police station (station-level officer)": "ಪೊಲೀಸ್ ಠಾಣೆ (ಠಾಣೆ ಮಟ್ಟದ ಅಧಿಕಾರಿ)",
+    "District Grievance Cell, DC Office": "ಜಿಲ್ಲಾ ಕುಂದುಕೊರತೆ ಕೋಶ, ಜಿಲ್ಲಾಧಿಕಾರಿ ಕಚೇರಿ",
+    "Section or station-level officer": "ವಿಭಾಗ ಅಥವಾ ಠಾಣೆ ಮಟ್ಟದ ಅಧಿಕಾರಿ",
+    "Sub-division officer": "ಉಪ-ವಿಭಾಗ ಅಧಿಕಾರಿ",
+    "Division officer": "ವಿಭಾಗೀಯ ಅಧಿಕಾರಿ",
+    "District-level department head": "ಜಿಲ್ಲಾ ಮಟ್ಟದ ಇಲಾಖೆ ಮುಖ್ಯಸ್ಥ",
+    "DC Office (District Head Office)": "ಜಿಲ್ಲಾಧಿಕಾರಿ ಕಚೇರಿ (ಜಿಲ್ಲಾ ಮುಖ್ಯ ಕಚೇರಿ)",
+    "Ward or taluk office": "ವಾರ್ಡ್ ಅಥವಾ ತಾಲೂಕು ಕಚೇರಿ",
+    "the field office": "ಕ್ಷೇತ್ರ ಕಚೇರಿ"
+  },
+  "kannada_names_note": "Kannada names for the labels above. A first draft that a native speaker should review. Used in Kannada messages and on the citizen pages."
+}
