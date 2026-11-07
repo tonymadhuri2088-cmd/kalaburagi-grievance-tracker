@@ -500,3 +500,24 @@ def test_category_hints_keep_a_matching_classifier_choice(kalaburagi):
     assert kannada["classification"]["complaint_type"] == "no_water_supply"
     unrelated = run_complaint("something odd", None, use_llm=False, type_hints=["garbage_sanitation"])
     assert unrelated["classification"]["complaint_type"] == "garbage_sanitation"
+
+
+# ------------------------------------------------------------------ sample data and hosting
+def test_sample_data_fills_the_dashboard_once(portal, staffed):
+    from complaint_portal.seed_sample import seed_sample_data
+    first = seed_sample_data(portal, NOW)
+    assert first == {"citizens": 6, "complaints": 12}
+    assert seed_sample_data(portal, NOW) == {"citizens": 0, "complaints": 0}      # only on an empty database
+    head = portal.store.get_officer_by_username("district.head")
+    summary = portal.district_summary(head, NOW)
+    assert summary["totals"]["total"] == 12 and summary["totals"]["closed"] == 2
+    assert summary["activity"]["escalations"] >= 1 and summary["activity"]["reminders_sent"] >= 1
+
+
+def test_the_routing_tools_import_without_neuro_san():
+    import subprocess, sys
+    code = ("import sys; sys.modules['neuro_san']=None; sys.path.insert(0,'complaint_tools');"
+            "import complaintrouter.intake, complaintrouter.router, complaintrouter.reply, "
+            "complaintrouter.escalation, complaintrouter.charter_lookup; print('ok')")
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=str(__import__('pathlib').Path(__file__).resolve().parents[1]))
+    assert result.stdout.strip() == "ok", result.stderr

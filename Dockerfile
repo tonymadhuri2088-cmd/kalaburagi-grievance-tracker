@@ -6,6 +6,7 @@
 #     docker build -t chennai-complaints .
 #     docker run -p 8000:8000 -v portal-data:/data chennai-complaints
 #
+# Set DEMO_PASSWORD (required) and optionally SEED_SAMPLE=1 and COMPLAINT_PORTAL_DEMO_MINUTES.
 # The database is kept in /data. Mount a persistent volume there, or data is lost on restart.
 
 FROM python:3.13-slim
@@ -16,9 +17,8 @@ ENV PYTHONUNBUFFERED=1 \
     HOST=0.0.0.0 \
     COMPLAINT_PORTAL_DB=/data/portal.db
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-
+# The web portal uses only the Python standard library, so nothing is installed here. (requirements.txt is for the
+# Neuro-SAN agent network and the tests, and is not needed to host the portal.)
 COPY . .
 
 RUN mkdir -p /data
@@ -26,4 +26,4 @@ RUN mkdir -p /data
 EXPOSE 8000
 
 # PORT is set by most hosts. The server reads it when no --port is given.
-CMD ["python", "portal/server.py"]
+CMD ["sh", "start.sh"]

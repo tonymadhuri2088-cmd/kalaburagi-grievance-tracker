@@ -30,6 +30,7 @@ You need Python 3.12 or 3.13. No internet and no model are needed.
 python -m pip install -r requirements.txt
 python -m pytest -q
 python portal/manage.py seed-demo --password "a-long-password"
+python portal/manage.py seed-sample   # optional: invented citizens and complaints
 python portal/server.py --demo-minutes 2
 ```
 
@@ -38,6 +39,29 @@ Open http://127.0.0.1:8000. Kalaburagi is the default district. To run the old C
 `--demo-minutes 2` makes every time limit 2 minutes, so reminders and escalation happen while you watch. A citizen's login code is shown on screen when no SMS service is set up.
 
 Demo accounts (password is the one you gave to seed-demo): `district.head` is the DC Office. Each department has `water.depot`, `water.deputy_ae`, `water.area_engineer`, `water.superintendent_engineer`, and the same for `roads`, `health`, `sanitation`, `police` and `general`. Officers log in on the first screen under Officer Login.
+
+## Put it online (GitHub and Render)
+
+The portal needs only Python, so any host that runs a Dockerfile works. These steps use Render's free plan.
+
+1. Make a new GitHub repository (for example `kalaburagi-grievance-tracker`). In the project folder run:
+   ```
+   git init
+   git add .
+   git commit -m "Kalaburagi Grievance Tracker for Solvathon 2026"
+   git branch -M main
+   git remote add origin https://github.com/<your-user>/kalaburagi-grievance-tracker.git
+   git push -u origin main
+   ```
+2. On render.com sign in with GitHub. Choose New, then Blueprint, pick the repository, and press Apply. `render.yaml` sets everything up. Render asks for `DEMO_PASSWORD`: type a password of at least 8 characters. That is the password of every demo officer account, including `district.head`.
+3. When the build finishes (about 3 minutes), Render shows the link, for example `https://kalaburagi-grievance-tracker.onrender.com`.
+
+Things to know about the free plan:
+- The service sleeps after about 15 minutes without visitors. The first visit after that takes about a minute to wake it. Open the link a few minutes before you present.
+- It has no disk. Every restart clears the data and loads the invented sample data again (`SEED_SAMPLE=1`), so the dashboards are never empty.
+- `COMPLAINT_PORTAL_DEMO_MINUTES=3` makes every new time limit 3 minutes, so judges can see reminders and escalation. Delete that setting in Render to use the sample days instead.
+- Without an SMS service, login codes are shown on screen, so anyone with the link can sign in as any citizen. That is fine for a demo with invented data. Do not put real complaints or real mobile numbers in it, and give the officer password only to the judges.
+- The AI sorting option (a local model or Gemini) is off online. The keyword sorting does not need any API key. Never put an API key in the repository.
 
 ## Demo script for Round 1 (5 minutes)
 

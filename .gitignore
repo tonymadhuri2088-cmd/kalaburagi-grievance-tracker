@@ -9,3 +9,5 @@ logs/
 flutter_app/build/
 flutter_app/.dart_tool/
 node_modules/
+
+*.zip

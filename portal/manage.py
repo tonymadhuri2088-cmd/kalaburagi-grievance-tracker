@@ -3,6 +3,7 @@
 Run from the project root:
 
     python portal/manage.py seed-demo --password "a-long-password"
+    python portal/manage.py seed-sample
     python portal/manage.py add-officer --username water.depot2 --name "Water: Depot Engineer (Zone 2)" --field water --level depot
     python portal/manage.py list-officers
     python portal/manage.py list-pending
@@ -28,6 +29,7 @@ from complaint_portal.auth import hash_password  # noqa: E402
 from complaint_portal.locations import load_locations  # noqa: E402
 from complaint_portal.rules import DISTRICT_HEAD, FIELD_ALL, FIELDS, STAGES  # noqa: E402
 from complaint_portal.seed import seed_demo_officers  # noqa: E402
+from complaint_portal.seed_sample import seed_sample_data  # noqa: E402
 from complaint_portal.store import Store  # noqa: E402
 from complaint_portal.workflow import Portal, utcnow  # noqa: E402
 
@@ -46,6 +48,14 @@ def cmd_seed_demo(args) -> None:
     for username in created:
         print(f"  {username}")
     print("Change these passwords before any real use. Existing accounts were left as they were.")
+
+
+def cmd_seed_sample(args) -> None:
+    done = seed_sample_data(Portal(open_store(args)))
+    if not done["complaints"]:
+        print("The database already has complaints, so nothing was added.")
+        return
+    print(f"Added {done['citizens']} invented citizens and {done['complaints']} invented complaints (filed at different times in the past).")
 
 
 def cmd_add_officer(args) -> None:
@@ -115,6 +125,9 @@ def build_parser() -> argparse.ArgumentParser:
     seed = commands.add_parser("seed-demo", help="Create demo accounts for every field and level.")
     seed.add_argument("--password", default=None, help="Password for the demo accounts. Prompted if left out.")
     seed.set_defaults(func=cmd_seed_demo)
+
+    sample = commands.add_parser("seed-sample", help="Add invented citizens and complaints so the dashboards have data.")
+    sample.set_defaults(func=cmd_seed_sample)
 
     add = commands.add_parser("add-officer", help="Add one officer account.")
     add.add_argument("--username", required=True)

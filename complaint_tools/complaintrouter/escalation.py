@@ -10,7 +10,11 @@ escalation.
 import json
 from typing import Any, Dict, Optional
 
-from neuro_san.interfaces.coded_tool import CodedTool
+try:
+    from neuro_san.interfaces.coded_tool import CodedTool
+except ImportError:  # the web portal runs without Neuro-SAN installed; only the agent network needs it
+    class CodedTool:  # pylint: disable=too-few-public-methods
+        """Stand-in so the tools still import when Neuro-SAN is not installed."""
 
 from .common import load_charter
 

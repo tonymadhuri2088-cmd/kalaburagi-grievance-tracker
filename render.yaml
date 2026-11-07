@@ -1,0 +1,17 @@
+# Render Blueprint: one free web service built from the Dockerfile.
+# On Render: New > Blueprint > pick this repository. Render asks for DEMO_PASSWORD.
+# The free plan has no disk, so data is cleared when the service restarts. SEED_SAMPLE=1 fills it with invented
+# demo data each time.
+services:
+  - type: web
+    name: kalaburagi-grievance-tracker
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/config
+    envVars:
+      - key: DEMO_PASSWORD
+        sync: false
+      - key: SEED_SAMPLE
+        value: "1"
+      - key: COMPLAINT_PORTAL_DEMO_MINUTES
+        value: "3"
