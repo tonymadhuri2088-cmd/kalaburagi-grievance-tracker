@@ -65,10 +65,11 @@
               <input class="input" id="contact" type="tel" inputmode="numeric" maxlength="16" autocomplete="tel" placeholder="Enter your 10-digit mobile number" required>
             </div>
           </div>
-          <p class="muted-note">You get a 6-digit code by SMS on this number. If SMS is not set up on the server, the code appears here instead.</p>
+          <p class="muted-note">You get a 6-digit code by SMS or WhatsApp on this number. If it is not set up on the server, the code appears here instead.</p>
           <button class="btn block" type="submit" id="loginSubmit">Send me a code <svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#arrow-right"/></svg></button>
           <p id="loginError" class="error" role="alert" hidden></p>
           <p id="newUserLink" class="hint" hidden><a href="/signup">Sign up as a citizen</a></p>
+          <p id="whatsappLink" class="hint" hidden>Prefer WhatsApp? <a id="whatsappAnchor" target="_blank" rel="noopener">Chat with us on WhatsApp</a></p>
         </form>
 
         <form id="verifyForm" hidden>
@@ -101,7 +102,7 @@
               <input class="input" id="workerContact" type="tel" inputmode="numeric" maxlength="16" autocomplete="tel" placeholder="Enter your 10-digit mobile number" required>
             </div>
           </div>
-          <p class="muted-note">Workers get a 6-digit code by SMS on this number. If SMS is not set up on the server, the code appears here instead.</p>
+          <p class="muted-note">Workers get a 6-digit code by SMS or WhatsApp on this number. If it is not set up on the server, the code appears here instead.</p>
           <button class="btn block" type="submit" id="workerLoginSubmit">Send me a code <svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#arrow-right"/></svg></button>
           <p id="workerLoginError" class="error" role="alert" hidden></p>
           <p id="workerNewUserLink" class="hint" hidden><a href="/worker/signup">Sign up as a worker</a></p>
@@ -214,6 +215,14 @@
       showTab(button.dataset.tab);
     });
   });
+
+  // A WhatsApp chat link, when the server has WhatsApp set up
+  fetch("/api/config").then((r) => r.json()).then((config) => {
+    if (config && config.whatsapp && /^https:\/\/wa\.me\//.test(config.whatsapp.link)) {
+      $("whatsappAnchor").href = config.whatsapp.link;
+      $("whatsappLink").hidden = false;
+    }
+  }).catch(() => {});
 
   // Messages after a sign-up, or when an officer's login has ended
   const params = new URLSearchParams(window.location.search);

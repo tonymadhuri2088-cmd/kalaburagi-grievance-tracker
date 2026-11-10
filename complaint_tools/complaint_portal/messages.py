@@ -42,6 +42,12 @@ TEMPLATES: Dict[str, Dict[str, str]] = {
         "en": "Update on complaint {id}: it was not resolved in time and has moved to {office}.",
         "kn": "ದೂರು {id} ಬಗ್ಗೆ ಮಾಹಿತಿ: ನಿಗದಿತ ಸಮಯದಲ್ಲಿ ಪರಿಹಾರವಾಗಿಲ್ಲ, ಆದ್ದರಿಂದ ಅದನ್ನು {office} ಗೆ ಕಳುಹಿಸಲಾಗಿದೆ.",
     },
+    "citizen_resolved": {
+        "en": "Complaint {id} ({label}) was marked resolved by {office}. If the problem is fixed, please confirm "
+              "it (on WhatsApp, send 4). If it is not fixed, say so and it will move up.",
+        "kn": "ದೂರು {id} ({label}) ಅನ್ನು {office} ಪರಿಹಾರವಾಗಿದೆ ಎಂದು ಗುರುತಿಸಿದೆ. ಸಮಸ್ಯೆ ಸರಿಯಾಗಿದ್ದರೆ ದಯವಿಟ್ಟು ದೃಢೀಕರಿಸಿ "
+              "(ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ 4 ಕಳುಹಿಸಿ). ಸರಿಯಾಗಿಲ್ಲದಿದ್ದರೆ ಹಾಗೆಂದು ತಿಳಿಸಿ, ಅದು ಮೇಲಿನ ಹಂತಕ್ಕೆ ಹೋಗುತ್ತದೆ.",
+    },
 }
 
 

@@ -199,3 +199,51 @@ def test_register_page_has_your_complaints_panel():
     page = (ROOT / "portal" / "register.html").read_text(encoding="utf-8")
     assert "Your complaints" in page and 'id="mineList"' in page
     assert "Not completed" in page and "Completed" in page
+
+
+# ---------------------------------------------------------------------------
+# WhatsApp
+# ---------------------------------------------------------------------------
+
+def test_whatsapp_cloud_sends_the_authentication_template():
+    from complaint_portal.sms import WhatsAppCloud
+    seen = {}
+
+    def transport(url, headers, body):
+        seen.update(url=url, headers=headers, body=json.loads(body))
+        return 200, json.dumps({"messages": [{"id": "wamid.1"}]})
+    sent, _ = WhatsAppCloud("TOKEN", "1234", "login_code", "en", transport).send_code(CITIZEN, "123456", 10, "login")
+    assert sent
+    assert seen["url"].endswith("/1234/messages") and seen["headers"]["Authorization"] == "Bearer TOKEN"
+    assert seen["body"]["to"] == "91" + CITIZEN and seen["body"]["template"]["name"] == "login_code"
+    assert seen["body"]["template"]["components"][0]["parameters"][0]["text"] == "123456"
+
+
+def test_whatsapp_cloud_failure_gives_the_reason():
+    from complaint_portal.sms import WhatsAppCloud
+    transport = lambda u, h, b: (400, json.dumps({"error": {"message": "Recipient not in allowed list"}}))
+    sent, detail = WhatsAppCloud("T", "1", "t", "en", transport).send_code(CITIZEN, "123456", 10, "login")
+    assert not sent and "allowed list" in detail
+
+
+def test_twilio_whatsapp_uses_the_whatsapp_prefix():
+    from complaint_portal.sms import TwilioWhatsApp
+    seen = {}
+
+    def transport(url, headers, body):
+        seen["body"] = urllib.parse.parse_qs(body.decode())
+        return 201, "{}"
+    sent, _ = TwilioWhatsApp("AC1", "secret", "+14155238886", transport).send_code(CITIZEN, "654321", 10, "login")
+    assert sent and seen["body"]["To"] == ["whatsapp:+91" + CITIZEN]
+    assert seen["body"]["From"] == ["whatsapp:+14155238886"]
+
+
+def test_whatsapp_providers_come_from_the_environment():
+    from complaint_portal.sms import TwilioWhatsApp, WhatsAppCloud
+    wa = sender_from_env({"SMS_PROVIDER": "whatsapp", "WHATSAPP_TOKEN": "t", "WHATSAPP_PHONE_NUMBER_ID": "1",
+                          "WHATSAPP_TEMPLATE": "login_code"})
+    assert isinstance(wa, WhatsAppCloud) and wa.channel == "WhatsApp"
+    tw = sender_from_env({"SMS_PROVIDER": "twilio_whatsapp", "TWILIO_ACCOUNT_SID": "AC1",
+                          "TWILIO_AUTH_TOKEN": "x", "TWILIO_WHATSAPP_FROM": "whatsapp:+14155238886"})
+    assert isinstance(tw, TwilioWhatsApp) and tw.sender == "+14155238886"
+    assert isinstance(sender_from_env({"SMS_PROVIDER": "whatsapp", "WHATSAPP_TOKEN": "t"}), NoSms)

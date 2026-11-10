@@ -1,12 +1,19 @@
 """Sending the one-time codes by SMS.
 
-Two providers are supported. Pick one in the .env file (see .env.example) or in environment variables:
+Four providers are supported (two for SMS, two for WhatsApp). Pick one in the .env file (see .env.example)
+or in environment variables:
 
 - Fast2SMS (Indian numbers):  SMS_PROVIDER=fast2sms, FAST2SMS_API_KEY=..., FAST2SMS_OTP_ID=...
   Uses the Fast2SMS OTP API (POST https://www.fast2sms.com/dev/otp/send) with our own code in "otp".
   FAST2SMS_OTP_ID is the ID of an OTP template in the Fast2SMS dashboard.
 - Twilio:  SMS_PROVIDER=twilio, TWILIO_ACCOUNT_SID=..., TWILIO_AUTH_TOKEN=..., TWILIO_FROM=+1...
   Sends to +91 followed by the 10-digit number.
+- WhatsApp Cloud API (Meta):  SMS_PROVIDER=whatsapp, WHATSAPP_TOKEN=..., WHATSAPP_PHONE_NUMBER_ID=...,
+  WHATSAPP_TEMPLATE=... (an approved "authentication" template whose body is {{1}}), WHATSAPP_LANGUAGE=en.
+  Sends to 91 followed by the 10-digit number.
+- Twilio WhatsApp:  SMS_PROVIDER=twilio_whatsapp, TWILIO_ACCOUNT_SID=..., TWILIO_AUTH_TOKEN=...,
+  TWILIO_WHATSAPP_FROM=+14155238886 (the Twilio sandbox number, or your approved WhatsApp sender).
+  In the sandbox each phone must first send the "join <word>" message shown in the Twilio console.
 
 With no provider set, nothing is sent and the portal shows the code on screen, as before.
 If sending fails, the portal also shows the code on screen and says why, so a demo never gets stuck.
@@ -40,6 +47,7 @@ class NoSms:
     """No provider set up: nothing is sent."""
 
     name = "none"
+    channel = "SMS"
     configured = False
 
     def send_code(self, mobile: str, code: str, minutes: int, purpose: str) -> Tuple[bool, str]:
@@ -50,6 +58,7 @@ class Fast2Sms:
     """Fast2SMS OTP API. The code we made is sent in "otp", so the portal still checks it itself."""
 
     name = "fast2sms"
+    channel = "SMS"
     configured = True
     url = "https://www.fast2sms.com/dev/otp/send"
 
@@ -84,7 +93,9 @@ class TwilioSms:
     """Twilio Messages API."""
 
     name = "twilio"
+    channel = "SMS"
     configured = True
+    prefix = ""   # "whatsapp:" for the WhatsApp subclass
 
     def __init__(self, account_sid: str, auth_token: str, sender: str, transport: Optional[Transport] = None) -> None:
         self.account_sid = account_sid
@@ -95,7 +106,8 @@ class TwilioSms:
     def send_code(self, mobile: str, code: str, minutes: int, purpose: str) -> Tuple[bool, str]:
         url = f"https://api.twilio.com/2010-04-01/Accounts/{urllib.parse.quote(self.account_sid)}/Messages.json"
         text = message_text(code, minutes, purpose)
-        body = urllib.parse.urlencode({"To": f"+91{mobile}", "From": self.sender, "Body": text}).encode("utf-8")
+        body = urllib.parse.urlencode(
+            {"To": f"{self.prefix}+91{mobile}", "From": f"{self.prefix}{self.sender}", "Body": text}).encode("utf-8")
         token = base64.b64encode(f"{self.account_sid}:{self.auth_token}".encode("utf-8")).decode("ascii")
         headers = {"Authorization": f"Basic {token}", "Content-Type": "application/x-www-form-urlencoded"}
         try:
@@ -109,6 +121,79 @@ class TwilioSms:
         except ValueError:
             message = None
         return False, f"Twilio said: {message or reply[:120] or status}"
+
+
+class TwilioWhatsApp(TwilioSms):
+    """Twilio Messages API over WhatsApp. Works with the free sandbox number after each phone has joined it."""
+
+    name = "twilio_whatsapp"
+    channel = "WhatsApp"
+    prefix = "whatsapp:"
+
+
+class WhatsAppCloud:
+    """WhatsApp Business Cloud API (Meta). Sends an approved authentication template with our code in it."""
+
+    name = "whatsapp"
+    channel = "WhatsApp"
+    configured = True
+    version = "v21.0"
+
+    def __init__(self, token: str, phone_number_id: str, template: str, language: str = "en",
+                 transport: Optional[Transport] = None) -> None:
+        self.token = token
+        self.phone_number_id = phone_number_id
+        self.template = template
+        self.language = language
+        self.transport = transport or _http_post
+
+    def send_code(self, mobile: str, code: str, minutes: int, purpose: str) -> Tuple[bool, str]:
+        url = f"https://graph.facebook.com/{self.version}/{urllib.parse.quote(self.phone_number_id)}/messages"
+        body = json.dumps({
+            "messaging_product": "whatsapp",
+            "to": f"91{mobile}",
+            "type": "template",
+            "template": {
+                "name": self.template,
+                "language": {"code": self.language},
+                "components": [
+                    {"type": "body", "parameters": [{"type": "text", "text": code}]},
+                    # Authentication templates carry a "copy code" button that needs the code again.
+                    {"type": "button", "sub_type": "url", "index": "0",
+                     "parameters": [{"type": "text", "text": code}]},
+                ],
+            },
+        }).encode("utf-8")
+        headers = {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
+        try:
+            status, reply = self.transport(url, headers, body)
+        except (OSError, ValueError) as error:
+            return False, f"WhatsApp could not be reached ({error})."
+        try:
+            data = json.loads(reply)
+        except ValueError:
+            data = {}
+        if 200 <= status < 300 and data.get("messages"):
+            return True, "sent"
+        message = (data.get("error") or {}).get("message") if isinstance(data, dict) else None
+        return False, f"WhatsApp said: {message or reply[:120] or status}"
+
+
+class ChannelCodes:
+    """Sends the codes through the WhatsApp chat provider (whatsapp.py) when no SMS or WhatsApp-code provider is set.
+
+    If the message cannot be sent (for example the person has not joined the sandbox, or WhatsApp's 24-hour window
+    is closed) the portal shows the code on screen instead, as it does without any provider."""
+
+    name = "whatsapp chat"
+    channel = "WhatsApp"
+    configured = True
+
+    def __init__(self, chat_channel) -> None:
+        self.chat_channel = chat_channel
+
+    def send_code(self, mobile: str, code: str, minutes: int, purpose: str) -> Tuple[bool, str]:
+        return self.chat_channel.send_text(mobile, message_text(code, minutes, purpose))
 
 
 def message_text(code: str, minutes: int, purpose: str) -> str:
@@ -135,6 +220,18 @@ def sender_from_env(env: Optional[Mapping[str, str]] = None):
         sender = (env.get("TWILIO_FROM") or "").strip()
         if sid and token and sender:
             return TwilioSms(sid, token, sender)
+    if provider == "twilio_whatsapp":
+        sid = (env.get("TWILIO_ACCOUNT_SID") or "").strip()
+        token = (env.get("TWILIO_AUTH_TOKEN") or "").strip()
+        sender = (env.get("TWILIO_WHATSAPP_FROM") or "").strip().removeprefix("whatsapp:")
+        if sid and token and sender:
+            return TwilioWhatsApp(sid, token, sender)
+    if provider == "whatsapp":
+        token = (env.get("WHATSAPP_TOKEN") or "").strip()
+        number_id = (env.get("WHATSAPP_PHONE_NUMBER_ID") or "").strip()
+        template = (env.get("WHATSAPP_TEMPLATE") or "").strip()
+        if token and number_id and template:
+            return WhatsAppCloud(token, number_id, template, (env.get("WHATSAPP_LANGUAGE") or "en").strip())
     return NoSms()
 
 

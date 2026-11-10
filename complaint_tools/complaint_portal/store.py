@@ -119,6 +119,15 @@ CREATE TABLE IF NOT EXISTS messages (
     channel TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS messages_by_complaint ON messages (complaint_id, id);
+-- People who have written to the WhatsApp bot: they have opted in, and WhatsApp lets us answer free-form for
+-- 24 hours after their last message. state is the bot's conversation (JSON).
+CREATE TABLE IF NOT EXISTS wa_contacts (
+    mobile TEXT PRIMARY KEY,
+    first_seen TEXT NOT NULL,
+    last_inbound TEXT NOT NULL,
+    language TEXT NOT NULL DEFAULT 'en',
+    state TEXT NOT NULL DEFAULT '{}'
+);
 CREATE INDEX IF NOT EXISTS complaints_by_officer ON complaints (assigned_officer_id);
 CREATE INDEX IF NOT EXISTS complaints_by_deadline ON complaints (status, stage_deadline);
 """
@@ -381,6 +390,27 @@ class Store:
                 rows = conn.execute("SELECT * FROM messages WHERE complaint_id = ? AND to_role = ? ORDER BY id",
                                     (complaint_id, to_role)).fetchall()
         return [dict(row) for row in rows]
+
+    # WhatsApp contacts
+
+    def wa_get(self, mobile: str) -> Optional[Dict[str, Any]]:
+        with self._conn() as conn:
+            row = conn.execute("SELECT * FROM wa_contacts WHERE mobile = ?", (mobile,)).fetchone()
+        return dict(row) if row else None
+
+    def wa_touch(self, mobile: str, at: str, language: str) -> Dict[str, Any]:
+        """Note that this person has just written to the bot. Creates the contact on the first message."""
+        with self._conn() as conn:
+            conn.execute(
+                "INSERT INTO wa_contacts (mobile, first_seen, last_inbound, language) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(mobile) DO UPDATE SET last_inbound = excluded.last_inbound",
+                (mobile, at, at, language))
+            row = conn.execute("SELECT * FROM wa_contacts WHERE mobile = ?", (mobile,)).fetchone()
+        return dict(row)
+
+    def wa_save(self, mobile: str, language: str, state: str) -> None:
+        with self._conn() as conn:
+            conn.execute("UPDATE wa_contacts SET language = ?, state = ? WHERE mobile = ?", (language, state, mobile))
 
     # Events
 

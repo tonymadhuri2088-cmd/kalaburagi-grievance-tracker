@@ -15,6 +15,8 @@ import base64
 import binascii
 import json
 import re
+import threading
+from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -161,6 +163,11 @@ class Portal:
         self.demo_minutes = demo_minutes if demo_minutes and demo_minutes > 0 else None
         # Completion codes, kept so the citizen's screen can show them (a stand-in for an SMS): ID -> (code, expires).
         self.completion_codes: Dict[str, Tuple[str, datetime]] = {}
+        # WhatsApp: when set (see wa_bot.py), follow-up messages to a citizen who has written to the bot are also
+        # sent to their WhatsApp. notifier.deliver(mobile, text) returns the channel used.
+        self.notifier: Any = None
+        self.whatsapp_info: Optional[Dict[str, str]] = None   # {"number", "link"} for the website's chat button
+        self._quiet = threading.local()
 
     def deliver_code(self, mobile: str, code: str, purpose: str) -> Dict[str, Any]:
         """Send a code by SMS when a provider is set up. Returns what the screen should say.
@@ -169,16 +176,17 @@ class Portal:
         Not sent (no provider, or the provider failed): {"code": code, "note": ...}, so the code is shown on screen.
         """
         if self.sms.configured:
+            channel = getattr(self.sms, "channel", "SMS")   # "SMS" or "WhatsApp"; the key stays sent_by_sms
             sent, detail = self.sms.send_code(mobile, code, CODE_MINUTES, purpose)
             if sent:
                 return {
                     "sent_by_sms": True,
                     "sent_to": mask_number(mobile),
-                    "note": f"We sent a 6-digit code by SMS to {mask_number(mobile)}.",
+                    "note": f"We sent a 6-digit code by {channel} to {mask_number(mobile)}.",
                 }
-            print(f"SMS to {mask_number(mobile)} failed: {detail}")
+            print(f"{channel} to {mask_number(mobile)} failed: {detail}")
             return {"code": code, "sent_by_sms": False,
-                    "note": f"The SMS could not be sent ({detail}) The code is shown here instead."}
+                    "note": f"The {channel} message could not be sent ({detail}) The code is shown here instead."}
         return {"code": code, "sent_by_sms": False,
                 "note": "This demo shows the code here instead of sending it by SMS."}
 
@@ -613,6 +621,8 @@ class Portal:
         note = clean_text(note, MAX_NOTE_CHARS, required=True)
         self.store.update_complaint(row["id"], status=AWAITING, stage_deadline=None, resolution_note=note, updated_at=iso(now))
         self.store.add_event(row["id"], iso(now), officer["username"], "resolved", f"Marked resolved: {note.rstrip('.')}. Waiting for the citizen to confirm.")
+        self._tell_citizen(self.store.get_complaint(row["id"]), now, "citizen_resolved",
+                           office=stage_label(row["stage"], load_charter(), row["owner_label"]))
         return self.officer_detail(officer, row["id"], now)
 
     def add_note(self, officer: Dict[str, Any], complaint_id: str, note: Any, now: Optional[datetime] = None) -> Dict[str, Any]:
@@ -671,6 +681,7 @@ class Portal:
             "levels": {stage: level_name(stage, load_charter()) for stage in STAGES if stage != DISTRICT_HEAD},
             "languages": ["en", "kn"],
             "kannada_names": load_charter().get("kannada_names", {}),
+            "whatsapp": self.whatsapp_info,
         }
 
     # The DC Office's view of the whole district
@@ -844,13 +855,29 @@ class Portal:
         reminders = self.send_reminders(now)
         return {"escalated": moved, "reminders": reminders}
 
+    @contextmanager
+    def muted(self):
+        """While this runs, nothing is pushed to WhatsApp (the bot answers in the chat itself)."""
+        self._quiet.on = True
+        try:
+            yield
+        finally:
+            self._quiet.on = False
+
     def _log_message(self, row: Dict[str, Any], now: datetime, to_role: str, to_name: Optional[str],
                      subject: str, language: str, **values: Any) -> None:
         """Keep a message in the communication log. The portal shows it; real SMS needs a provider template."""
         charter = load_charter()
         values.setdefault("id", row["id"])
         values.setdefault("label", charter["complaint_types"].get(row["complaint_type"], {}).get("label", "General grievance"))
-        self.store.add_message(row["id"], iso(now), to_role, to_name, subject, language, texts.render(subject, language, **values))
+        body = texts.render(subject, language, **values)
+        channel = "portal"
+        if to_role == "citizen" and self.notifier is not None and not getattr(self._quiet, "on", False):
+            try:
+                channel = self.notifier.deliver(row["citizen_contact"], body)
+            except Exception as error:  # a WhatsApp problem must never stop a complaint from moving on
+                print(f"WhatsApp push failed: {error}")
+        self.store.add_message(row["id"], iso(now), to_role, to_name, subject, language, body, channel)
 
     def _tell_citizen(self, row: Dict[str, Any], now: datetime, subject: str, **values: Any) -> None:
         """A follow-up message to the citizen, in the language the complaint was written in."""

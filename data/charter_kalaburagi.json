@@ -280,7 +280,18 @@
     "District-level department head": "ಜಿಲ್ಲಾ ಮಟ್ಟದ ಇಲಾಖೆ ಮುಖ್ಯಸ್ಥ",
     "DC Office (District Head Office)": "ಜಿಲ್ಲಾಧಿಕಾರಿ ಕಚೇರಿ (ಜಿಲ್ಲಾ ಮುಖ್ಯ ಕಚೇರಿ)",
     "Ward or taluk office": "ವಾರ್ಡ್ ಅಥವಾ ತಾಲೂಕು ಕಚೇರಿ",
-    "the field office": "ಕ್ಷೇತ್ರ ಕಚೇರಿ"
+    "the field office": "ಕ್ಷೇತ್ರ ಕಚೇರಿ",
+    "Kalaburagi City": "ಕಲಬುರಗಿ ನಗರ",
+    "Aland": "ಆಳಂದ",
+    "Afzalpur": "ಅಫಜಲಪುರ",
+    "Chincholi": "ಚಿಂಚೋಳಿ",
+    "Chitapur": "ಚಿತ್ತಾಪುರ",
+    "Jewargi": "ಜೇವರ್ಗಿ",
+    "Sedam": "ಸೇಡಂ",
+    "Kamalapur": "ಕಮಲಾಪುರ",
+    "Kalagi": "ಕಾಳಗಿ",
+    "Shahabad": "ಶಹಾಬಾದ್",
+    "Yedrami": "ಯಡ್ರಾಮಿ"
   },
   "kannada_names_note": "Kannada names for the labels above. A first draft that a native speaker should review. Used in Kannada messages and on the citizen pages."
 }

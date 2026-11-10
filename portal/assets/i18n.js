@@ -53,12 +53,14 @@
     "Officer Login": "ಅಧಿಕಾರಿ ಲಾಗಿನ್",
     "Mobile number": "ಮೊಬೈಲ್ ಸಂಖ್ಯೆ",
     "Enter your 10-digit mobile number": "ನಿಮ್ಮ 10 ಅಂಕಿಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
-    "You get a 6-digit code by SMS on this number. If SMS is not set up on the server, the code appears here instead.":
-      "ಈ ಸಂಖ್ಯೆಗೆ SMS ಮೂಲಕ 6 ಅಂಕಿಯ ಕೋಡ್ ಬರುತ್ತದೆ. ಸರ್ವರ್‌ನಲ್ಲಿ SMS ಸಿದ್ಧವಿಲ್ಲದಿದ್ದರೆ ಕೋಡ್ ಇಲ್ಲಿಯೇ ಕಾಣಿಸುತ್ತದೆ.",
-    "Workers get a 6-digit code by SMS on this number. If SMS is not set up on the server, the code appears here instead.":
-      "ಕಾರ್ಮಿಕರಿಗೆ ಈ ಸಂಖ್ಯೆಗೆ SMS ಮೂಲಕ 6 ಅಂಕಿಯ ಕೋಡ್ ಬರುತ್ತದೆ. ಸರ್ವರ್‌ನಲ್ಲಿ SMS ಸಿದ್ಧವಿಲ್ಲದಿದ್ದರೆ ಕೋಡ್ ಇಲ್ಲಿಯೇ ಕಾಣಿಸುತ್ತದೆ.",
+    "You get a 6-digit code by SMS or WhatsApp on this number. If it is not set up on the server, the code appears here instead.":
+      "ಈ ಸಂಖ್ಯೆಗೆ SMS ಅಥವಾ WhatsApp ಮೂಲಕ 6 ಅಂಕಿಯ ಕೋಡ್ ಬರುತ್ತದೆ. ಸರ್ವರ್‌ನಲ್ಲಿ ಇದು ಸಿದ್ಧವಿಲ್ಲದಿದ್ದರೆ ಕೋಡ್ ಇಲ್ಲಿಯೇ ಕಾಣಿಸುತ್ತದೆ.",
+    "Workers get a 6-digit code by SMS or WhatsApp on this number. If it is not set up on the server, the code appears here instead.":
+      "ಕಾರ್ಮಿಕರಿಗೆ ಈ ಸಂಖ್ಯೆಗೆ SMS ಅಥವಾ WhatsApp ಮೂಲಕ 6 ಅಂಕಿಯ ಕೋಡ್ ಬರುತ್ತದೆ. ಸರ್ವರ್‌ನಲ್ಲಿ ಇದು ಸಿದ್ಧವಿಲ್ಲದಿದ್ದರೆ ಕೋಡ್ ಇಲ್ಲಿಯೇ ಕಾಣಿಸುತ್ತದೆ.",
     "Send me a code": "ನನಗೆ ಕೋಡ್ ಕಳುಹಿಸಿ",
     "Sign up as a citizen": "ನಾಗರಿಕರಾಗಿ ನೋಂದಾಯಿಸಿ",
+    "Prefer WhatsApp?": "ವಾಟ್ಸಾಪ್ ಇಷ್ಟವೇ?",
+    "Chat with us on WhatsApp": "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ನಮ್ಮೊಂದಿಗೆ ಚಾಟ್ ಮಾಡಿ",
     "Code": "ಕೋಡ್",
     "Enter the 6-digit code": "6 ಅಂಕಿಯ ಕೋಡ್ ನಮೂದಿಸಿ",
     "Log in": "ಲಾಗಿನ್",

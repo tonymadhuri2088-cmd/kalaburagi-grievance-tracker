@@ -63,6 +63,61 @@ Things to know about the free plan:
 - Without an SMS service, login codes are shown on screen, so anyone with the link can sign in as any citizen. That is fine for a demo with invented data. Do not put real complaints or real mobile numbers in it, and give the officer password only to the judges.
 - The AI sorting option (a local model or Gemini) is off online. The keyword sorting does not need any API key. Never put an API key in the repository.
 
+## WhatsApp chat bot (optional, and it works with the demo data)
+
+Citizens can do everything by chatting with one WhatsApp number, in English or Kannada, without a password. WhatsApp
+itself proves the phone number.
+
+| They send | What happens |
+|---|---|
+| a number from the menu, or "hi" | the menu: 1 register, 2 track, 3 my complaints, 4 confirm a fix, 5 website login code, 6 language |
+| a description of the problem in their own words | with Claude on, it works out the kind and category and asks only for what is missing; without it, it asks with menus |
+| the questions for a new complaint | kind, category, description, place (text or a location pin, or "same" for home), 3 photos for everyday complaints (police: optional), a check, then submit |
+| a complaint ID | its status, office, deadline and latest update |
+| "4" after an officer marks a complaint resolved | confirm it is fixed (a code closes it) or say it is not (it moves up a level) |
+
+The other direction: once someone has written to the bot, the portal's follow-ups (registered, officer reminded,
+escalated, marked resolved) are also pushed to their WhatsApp. The communication log shows the channel.
+
+Safety points built in: a new Emergency complaint first says to call 112; police complaints show the notice that FIR
+decisions stay with police officials; the Claude model only picks from fixed lists and never writes what the bot says
+or the complaint that is filed; webhooks are accepted only with a valid signature; a number can send at most 20
+messages a minute; Claude calls are capped per day.
+
+### Set it up with the Twilio WhatsApp sandbox (about 10 minutes, free)
+
+1. Create a Twilio account. In the console open Messaging, Try it out, Send a WhatsApp message. It shows the sandbox
+   number (+1 415 523 8886) and a join message such as `join silver-tiger`.
+2. From each phone that will test it, send that join message to the sandbox number. The join lasts 72 hours, so repeat
+   it before the demo.
+3. In Render, Environment, add these variables (never put them in GitHub):
+   `WHATSAPP_PROVIDER` = `twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` = `+14155238886`,
+   `PUBLIC_URL` = `https://kalaburagi-grievance-tracker.onrender.com`, and optionally `WHATSAPP_JOIN_TEXT` = your join
+   message (it fills the website's chat link). Add `ANTHROPIC_API_KEY` to let Claude read free-text messages.
+4. In the Twilio console, on the sandbox settings page, set "When a message comes in" to
+   `https://kalaburagi-grievance-tracker.onrender.com/api/whatsapp` with method POST. Save.
+5. Send "hi" from your phone. The menu should come back.
+
+The WhatsApp Cloud API (Meta) works too: set `WHATSAPP_PROVIDER=meta`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
+`WHATSAPP_VERIFY_TOKEN` (any text you invent) and `WHATSAPP_APP_SECRET`, and point the webhook at the same `/api/whatsapp`
+address. Meta lets us send free-form messages only within 24 hours of the person's last message. For later updates set
+`WHATSAPP_UPDATE_TEMPLATE` to an approved utility template whose body is `{{1}}`.
+
+Login codes for the website also go to the person's WhatsApp when the chat is on (and no separate SMS provider is set).
+If the message cannot be sent, the code is shown on screen as before.
+
+Things to know:
+- Render's free plan sleeps after 15 minutes. Twilio waits about 15 seconds for the webhook, so a message sent to a
+  sleeping service is lost. Open the website a few minutes before the demo, or ping it every 10 minutes (for example
+  with a free uptime monitor).
+- Twilio's free-form messages work only within 24 hours of the person's last message. Reminders in the demo come within
+  minutes, so this does not matter there.
+- The phone number is the identity. Do not use it for real complaints until a real provider, a privacy notice and the
+  department's approval are in place.
+- With a Claude key set, the text of free-form messages goes to Anthropic's API. Use invented data in the demo.
+- Cost: the bot uses the small, cheap model by default and stops after `WHATSAPP_AI_DAILY_LIMIT` calls a day (300).
+- The bot's Kannada is a first draft, like the rest. Have a Kannada speaker read `complaint_tools/complaint_portal/wa_bot.py`.
+
 ## Demo script for Round 1 (5 minutes)
 
 Start the server with `--demo-minutes 2` and have two browser windows ready: one logged in as a citizen, one as `district.head`. Sign the citizen up beforehand (name, mobile 9876543210, any address in Kalaburagi).
@@ -92,7 +147,7 @@ If something goes wrong, `python portal/manage.py check-overdue` runs the remind
 - The time limits for Kalaburagi are sample numbers made by us. They are not from any department.
 - The taluks and wards are real taluk names, but ward numbers 56 to 65 are placeholders and no street-level matching exists.
 - The Kannada text (screens, messages, keywords) is a first draft. A native speaker should review it. History entries and the router's draft message stay in English.
-- Reminders are not sent by SMS. They are kept in the portal log. Real SMS needs a provider and approved message templates.
+- Reminders are not sent by SMS. They are kept in the portal log, and pushed to WhatsApp for people who have chatted with the bot (within 24 hours of their last message). Real SMS needs a provider and approved message templates.
 - Officer and worker screens are in English only.
 - The Flutter app in this repository was not updated or compiled for this version. The web portal is the demo.
 - Login codes appear on screen when no SMS service is set up. This is for the demo only.

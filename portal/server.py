@@ -31,7 +31,7 @@ from http import cookies
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, quote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "complaint_tools"))
@@ -41,7 +41,10 @@ from complaint_portal.auth import CITIZEN_SESSION_DAYS, Sessions, next_midnight_
 from complaint_portal.rules import DISTRICT_HEAD  # noqa: E402
 from complaint_portal.store import Store  # noqa: E402
 from complaint_portal.workers import WorkerDesk  # noqa: E402
-from complaint_portal.sms import load_env_file, sender_from_env  # noqa: E402
+from complaint_portal.sms import ChannelCodes, load_env_file, sender_from_env  # noqa: E402
+from complaint_portal.wa_ai import understanding_from_env  # noqa: E402
+from complaint_portal.wa_bot import WhatsAppBot  # noqa: E402
+from complaint_portal.whatsapp import InboundRejected, channel_from_env  # noqa: E402
 from complaint_portal.workflow import Portal, PortalError, utcnow  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -69,6 +72,8 @@ COOKIE_NAME = "portal_session"
 CITIZEN_COOKIE = "citizen_session"
 WORKER_COOKIE = "worker_session"
 MAX_BODY_BYTES = 20000
+MAX_WEBHOOK_BYTES = 200_000
+WHATSAPP_PATH = "/api/whatsapp"
 MAX_UPLOAD_BYTES = 17_000_000  # a complaint with three 4 MB files, which are sent as text (base64)
 DEFAULT_DB = HERE / "data" / "portal.db"
 DEFAULT_CHECK_SECONDS = 30
@@ -87,6 +92,7 @@ class Handler(BaseHTTPRequestHandler):
     worker_sessions: Sessions
     workers: WorkerDesk
     web_dir: Path
+    whatsapp: Optional[WhatsAppBot] = None
 
     def do_GET(self):  # noqa: N802 (name required by http.server)
         path = urlsplit(self.path).path
@@ -109,6 +115,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if path == "/api/config":
                 self._send_json(200, self.portal.public_config())
+                return
+            if path == WHATSAPP_PATH:
+                self._whatsapp_challenge()
                 return
             if path == "/api/locations":
                 self._send_json(200, self.portal.locations.tree())
@@ -167,6 +176,9 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         try:
             extra_headers: Dict[str, Any] = {}
+            if path == WHATSAPP_PATH:
+                self._whatsapp_message(path)
+                return
             if path == "/api/citizen/match":
                 body = self._read_json()
                 self._send_json(200, self.portal.match_address(body.get("address")))
@@ -319,6 +331,43 @@ class Handler(BaseHTTPRequestHandler):
             traceback.print_exc()
             self._send_json(500, {"error": "Something went wrong on the server."})
 
+    # WhatsApp webhook
+
+    def _whatsapp_challenge(self) -> None:
+        """Meta checks a new webhook with a GET and expects its challenge back."""
+        bot = self.whatsapp
+        query = {key: values[0] for key, values in parse_qs(urlsplit(self.path).query).items()}
+        answer = bot.channel.verify_challenge(query) if bot else None
+        if answer is None:
+            self._send_json(404, {"error": "Not found."})
+            return
+        self._send_bytes(200, answer.encode("utf-8"), "text/plain; charset=utf-8")
+
+    def _whatsapp_message(self, path: str) -> None:
+        """A message from the provider. Checked first, then answered in the background so the 200 is immediate."""
+        bot = self.whatsapp
+        if bot is None:
+            self._send_json(404, {"error": "Not found."})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if not 0 < length <= MAX_WEBHOOK_BYTES:
+            self._send_json(413 if length > MAX_WEBHOOK_BYTES else 400, {"error": "Bad request."})
+            return
+        raw = self.rfile.read(length)
+        try:
+            messages = bot.channel.parse(path, dict(self.headers.items()), raw)
+        except InboundRejected as error:
+            print(f"WhatsApp webhook refused: {error.message}")
+            self._send_json(error.status, {"error": "Refused."})
+            return
+        if messages:
+            bot.handle_async(messages)
+        body, content_type = bot.channel.reply_to_webhook()
+        self._send_bytes(200, body, content_type)
+
     # Helpers
 
     def _send_app_file(self, relative: str) -> None:
@@ -437,7 +486,8 @@ def _cookie(token: str, max_age: int, name: str = COOKIE_NAME) -> str:
 
 def make_server(host: str, port: int, portal: Portal, sessions: Sessions,
                 citizen_sessions: Optional[Sessions] = None, web_dir: Optional[Path] = None,
-                worker_sessions: Optional[Sessions] = None) -> ThreadingHTTPServer:
+                worker_sessions: Optional[Sessions] = None,
+                whatsapp: Optional[WhatsAppBot] = None) -> ThreadingHTTPServer:
     """Create the server without starting it. Tests use port 0 to get a free port."""
     bound = type("BoundHandler", (Handler,), {
         "portal": portal,
@@ -446,6 +496,7 @@ def make_server(host: str, port: int, portal: Portal, sessions: Sessions,
         "worker_sessions": worker_sessions or Sessions(),
         "workers": WorkerDesk(portal),
         "web_dir": web_dir or WEB_DIR,
+        "whatsapp": whatsapp,
     })
     return ThreadingHTTPServer((host, port), bound)
 
@@ -490,7 +541,21 @@ def main() -> None:
     sms = sender_from_env()
     portal = Portal(Store(args.db), demo_minutes=args.demo_minutes, sms=sms)
     sessions = Sessions()
-    httpd = make_server(args.host, args.port, portal, sessions, Sessions())
+    channel, whatsapp_note = channel_from_env()
+    bot = None
+    if channel is not None:
+        understanding = understanding_from_env()
+        bot = WhatsAppBot(portal, channel, understanding)
+        portal.notifier = bot
+        if not sms.configured:   # no separate code provider: the codes go through the WhatsApp chat
+            sms = ChannelCodes(channel)
+            portal.sms = sms
+        number = (os.environ.get("WHATSAPP_DISPLAY_NUMBER") or os.environ.get("TWILIO_WHATSAPP_FROM") or "").strip()
+        digits = "".join(ch for ch in number if ch.isdigit())
+        if digits:
+            join = (os.environ.get("WHATSAPP_JOIN_TEXT") or "Hi").strip()
+            portal.whatsapp_info = {"number": "+" + digits, "link": f"https://wa.me/{digits}?text={quote(join)}"}
+    httpd = make_server(args.host, args.port, portal, sessions, Sessions(), whatsapp=bot)
     start_overdue_check(portal, args.check_seconds)
 
     print(f"Complaint portal listening on {args.host}, port {args.port}")
@@ -498,9 +563,13 @@ def main() -> None:
     print(f"Flutter web app (if built): http://127.0.0.1:{args.port}/app/")
     print(f"Database: {args.db}")
     if sms.configured:
-        print(f"Codes are sent by SMS through {sms.name}.")
+        print(f"Codes are sent by {getattr(sms, 'channel', 'SMS')} through {sms.name}.")
     else:
         print("SMS is not set up: codes are shown on screen. See .env.example to send them by SMS.")
+    print(whatsapp_note)
+    if bot is not None:
+        print("Claude understands free-text WhatsApp messages." if bot.understanding else
+              "No ANTHROPIC_API_KEY: WhatsApp messages are understood by keywords and menus.")
     if portal.demo_minutes:
         print(f"Demo time limits: every new time limit is {portal.demo_minutes:g} minute(s).")
     print("Press Ctrl+C to stop.")
