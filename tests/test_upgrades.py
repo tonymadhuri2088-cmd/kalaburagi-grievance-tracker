@@ -338,3 +338,22 @@ def test_purging_the_sample_data_keeps_real_complaints(desk):
     assert left == [real["id"]]
     assert store.get_citizen(PHONE) is not None                      # the real citizen stays
     assert purge_sample_data(desk) == {"citizens": 0, "complaints": 0}   # safe to run again
+
+
+def test_the_district_head_can_start_fresh_and_keeps_officers_and_limits(desk):
+    file_road(desk)
+    desk.set_limit(head(desk), {"type": "road_damage", "days": 4}, now=NOW)
+    other = desk.store.get_officer_by_username("general.depot")
+    with pytest.raises(PortalError) as denied:
+        desk.reset_demo(other, {"confirm": "RESET"})
+    assert denied.value.status == 403
+    with pytest.raises(PortalError) as unconfirmed:
+        desk.reset_demo(head(desk), {})
+    assert unconfirmed.value.status == 400 and desk.store.list_complaints()
+    result = desk.reset_demo(head(desk), {"confirm": "RESET"}, now=NOW)
+    assert result["removed"]["complaints"] == 1 and result["removed"]["citizens"] == 1
+    assert not desk.store.list_complaints() and desk.store.get_citizen(PHONE) is None
+    assert desk.store.get_officer_by_username("district.head") is not None       # officers stay
+    assert load_charter()["complaint_types"]["road_damage"]["fix_days"] == 4      # time limits stay
+    desk.sign_up_citizen("Ravi Kumar", PHONE, "12 Main Road, Kalaburagi", 5, now=NOW)   # and people can sign up again
+    assert file_road(desk)["id"]

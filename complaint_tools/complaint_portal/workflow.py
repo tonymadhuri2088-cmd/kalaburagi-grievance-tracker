@@ -730,6 +730,21 @@ class Portal:
         return {"types": types, "levels": levels, "note": base.get("label"), "demo_minutes": self.demo_minutes or 0,
                 "log": self.store.list_limit_log(), "applies_to": "New complaints. A complaint already filed keeps the time limit it was given."}
 
+    def reset_demo(self, officer: Dict[str, Any], body: Dict[str, Any], now: Optional[datetime] = None) -> Dict[str, Any]:
+        """The District Head Office starts the demo fresh: every complaint, citizen and worker is removed.
+
+        Officers and the time limits are kept. The caller must send {"confirm": "RESET"}.
+        """
+        if officer["level"] != DISTRICT_HEAD:
+            raise PortalError(403, "Only the District Head Office can start the demo fresh.")
+        if body.get("confirm") != "RESET":
+            raise PortalError(400, 'To remove all complaints, citizens and workers, send confirm: "RESET".')
+        removed = self.store.reset_data()
+        self.store.add_limit_log(iso(now or utcnow()), officer["username"],
+                                 f"Started fresh: removed {removed['complaints']} complaints, {removed['citizens']} citizens, "
+                                 f"{removed['workers']} workers", None, None)
+        return {"removed": removed}
+
     def set_limit(self, officer: Dict[str, Any], body: Dict[str, Any], now: Optional[datetime] = None) -> Dict[str, Any]:
         """The District Head Office changes one time limit (or resets them all). Every change is logged."""
         if officer["level"] != DISTRICT_HEAD:

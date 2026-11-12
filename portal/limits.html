@@ -69,6 +69,12 @@
   </section>
 
   <section class="block">
+    <h2>Start fresh before the demo</h2>
+    <p style="margin:0 0 10px;color:var(--muted);max-width:760px">Removes every complaint, citizen and worker (and their photos and logins). Officer accounts and the time limits above stay. Use it once, right before you present, so the audience signs up and files from an empty system.</p>
+    <p style="margin:0"><button type="button" class="btn outline" id="freshBtn">Remove all complaints, citizens and workers</button></p>
+  </section>
+
+  <section class="block">
     <h2>Change log</h2>
     <div class="scroll"><table class="plain" id="logTable"><thead><tr><th>When</th><th>Who</th><th>What</th><th>From</th><th>To</th></tr></thead><tbody></tbody></table></div>
     <p style="margin:14px 0 40px"><button type="button" class="btn outline" id="resetBtn">Reset every limit to the charter file</button></p>
@@ -84,8 +90,8 @@
 (function () {
   function el(tag, text, cls) { var n = document.createElement(tag); if (text !== undefined && text !== null) n.textContent = text; if (cls) n.className = cls; return n; }
   function show(text, ok) { var m = document.getElementById("msg"); m.textContent = text; m.className = "msg " + (ok ? "ok" : "err"); m.hidden = !text; }
-  async function call(method, body) {
-    var res = await fetch("/api/district/limits", { method: method, credentials: "same-origin",
+  async function call(method, body, url) {
+    var res = await fetch(url || "/api/district/limits", { method: method, credentials: "same-origin",
       headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
     var data = {}; try { data = await res.json(); } catch (e) {}
     if (!res.ok) { var err = new Error(data.error || "Request failed."); err.status = res.status; throw err; }
@@ -120,6 +126,15 @@
   document.getElementById("resetBtn").addEventListener("click", async function () {
     if (!confirm("Reset every time limit to the charter file?")) return;
     try { render(await call("POST", { reset: true })); show("Every limit is back to the charter file.", true); } catch (err) { show(err.message, false); }
+  });
+  document.getElementById("freshBtn").addEventListener("click", async function () {
+    var typed = prompt("This removes ALL complaints, citizens and workers. Type RESET to confirm.");
+    if (typed !== "RESET") return;
+    try {
+      var res = await call("POST", { confirm: "RESET" }, "/api/district/reset-demo");
+      show("Done. Removed " + res.removed.complaints + " complaints, " + res.removed.citizens + " citizens and " + res.removed.workers + " workers.", true);
+      render(await call("GET"));
+    } catch (err) { show(err.message, false); }
   });
   call("GET").then(function (d) { document.getElementById("content").hidden = false; render(d); }).catch(function (err) {
     document.getElementById("denied").hidden = false;

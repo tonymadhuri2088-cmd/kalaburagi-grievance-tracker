@@ -252,6 +252,24 @@ class Store:
             rows = conn.execute("SELECT * FROM limit_log ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [dict(row) for row in rows]
 
+    def reset_data(self) -> Dict[str, int]:
+        """Start fresh: remove every complaint, citizen and worker (and their logins and photos).
+
+        The officer accounts, the time limits and the change log stay. Returns what was removed.
+        """
+        import shutil
+        removed = {}
+        with self._conn() as conn:
+            for table in ("complaints", "citizens", "workers"):
+                removed[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            for table in ("events", "notices", "reminders", "messages", "complaints", "citizens", "workers", "wa_contacts"):
+                conn.execute(f"DELETE FROM {table}")
+            conn.execute("DELETE FROM sessions WHERE kind IN ('citizen', 'worker')")
+        photos = Path(self.path).parent / "photos"
+        if photos.is_dir():
+            shutil.rmtree(photos, ignore_errors=True)
+        return removed
+
     # Login sessions (so people stay logged in when the host restarts)
 
     def save_session(self, token_hash: str, kind: str, subject: str, expires: str) -> None:

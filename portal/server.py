@@ -224,6 +224,10 @@ class Handler(BaseHTTPRequestHandler):
                 officer = self._current_officer()
                 self._send_json(200, self.portal.set_limit(officer, self._read_json()))
                 return
+            if path == "/api/district/reset-demo":
+                officer = self._current_officer()
+                self._send_json(200, self.portal.reset_demo(officer, self._read_json()))
+                return
             if path == "/api/citizen/match":
                 body = self._read_json()
                 self._send_json(200, self.portal.match_address(body.get("address")))
