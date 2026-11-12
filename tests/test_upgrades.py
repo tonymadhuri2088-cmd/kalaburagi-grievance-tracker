@@ -357,3 +357,13 @@ def test_the_district_head_can_start_fresh_and_keeps_officers_and_limits(desk):
     assert load_charter()["complaint_types"]["road_damage"]["fix_days"] == 4      # time limits stay
     desk.sign_up_citizen("Ravi Kumar", PHONE, "12 Main Road, Kalaburagi", 5, now=NOW)   # and people can sign up again
     assert file_road(desk)["id"]
+
+
+def test_the_share_page_has_the_start_fresh_button_but_the_server_still_needs_the_dc_office(server):
+    html = fetch(server + "/share")[2].decode("utf-8")
+    assert 'id="freshBtn"' in html and "/api/district/reset-demo" in html
+    request = urllib.request.Request(server + "/api/district/reset-demo", data=b'{"confirm":"RESET"}',
+                                     headers={"Content-Type": "application/json"}, method="POST")
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request, timeout=10)
+    assert error.value.code == 401          # a visitor who is not logged in cannot wipe anything
