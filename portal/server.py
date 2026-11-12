@@ -237,6 +237,11 @@ class Handler(BaseHTTPRequestHandler):
                         raise PortalError(403, "That is not the demo password.")
                     self._send_json(200, self.portal.reset_demo(None, body))
                     return
+                if (os.environ.get("ALLOW_OPEN_RESET") or "1") != "0":
+                    # For the live demo the owners press the button themselves, with no password. Set ALLOW_OPEN_RESET=0
+                    # on the host to go back to needing the demo password or the District Head Office login.
+                    self._send_json(200, self.portal.reset_demo(None, body))
+                    return
                 officer = self._current_officer()
                 self._send_json(200, self.portal.reset_demo(officer, body))
                 return

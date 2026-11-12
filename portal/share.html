@@ -135,9 +135,9 @@
     <div class="note">All names, numbers and complaints in this demo are invented. Do not enter real personal data.</div>
   </section>
 
-  <section class="pad noprint" style="padding-bottom:40px">
+  <section class="pad noprint" id="freshSection" hidden style="padding-bottom:40px">
     <h2 style="color:var(--navy);margin:0 0 10px">Start fresh before the demo</h2>
-    <p class="muted-note">Removes every complaint, citizen and worker (with their photos and logins) so you present from an empty system. Officer accounts and time limits stay. It asks for the demo password first.</p>
+    <p class="muted-note">Removes every complaint, citizen and worker (with their photos and logins) so you present from an empty system. Officer accounts and time limits stay. It asks you to confirm first. This section only shows when the address ends with <b>?reset=1</b>, so visitors do not see it.</p>
     <p style="margin:12px 0 0"><button type="button" class="btn outline" id="freshBtn">Remove all complaints, citizens and workers</button></p>
     <div class="ok" id="freshOk" hidden></div>
     <div class="note" id="freshErr" hidden></div>
@@ -173,15 +173,14 @@
     });
   }).catch(function () { setText("mainLink", location.host); });
 
+  if (/[?&]reset=1\b/.test(location.search)) document.getElementById("freshSection").hidden = false;
   document.getElementById("freshBtn").addEventListener("click", async function () {
     var ok = document.getElementById("freshOk"), err = document.getElementById("freshErr");
     ok.hidden = err.hidden = true;
-    var password = prompt("Enter the demo password to continue.");
-    if (!password) return;
     if (!confirm("This removes ALL complaints, citizens and workers. Are you sure?")) return;
     try {
       var res = await fetch("/api/district/reset-demo", { method: "POST", credentials: "same-origin",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "RESET", password: password }) });
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "RESET" }) });
       var data = {}; try { data = await res.json(); } catch (e) {}
       if (!res.ok) { err.textContent = data.error || "Could not start fresh."; err.hidden = false; return; }
       ok.textContent = "Done. Removed " + data.removed.complaints + " complaints, " + data.removed.citizens + " citizens and " + data.removed.workers + " workers.";

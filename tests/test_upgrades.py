@@ -359,14 +359,17 @@ def test_the_district_head_can_start_fresh_and_keeps_officers_and_limits(desk):
     assert file_road(desk)["id"]
 
 
-def test_the_share_page_has_the_start_fresh_button_but_the_server_still_needs_the_dc_office(server):
+def test_the_share_page_has_the_start_fresh_button_hidden_unless_asked_for(server, monkeypatch):
     html = fetch(server + "/share")[2].decode("utf-8")
     assert 'id="freshBtn"' in html and "/api/district/reset-demo" in html
     request = urllib.request.Request(server + "/api/district/reset-demo", data=b'{"confirm":"RESET"}',
                                      headers={"Content-Type": "application/json"}, method="POST")
+    monkeypatch.setenv("ALLOW_OPEN_RESET", "0")
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(request, timeout=10)
-    assert error.value.code == 401          # a visitor who is not logged in cannot wipe anything
+    assert error.value.code == 401          # with the switch off, a visitor who is not logged in cannot wipe anything
+    monkeypatch.delenv("ALLOW_OPEN_RESET")
+    assert json.loads(urllib.request.urlopen(request, timeout=10).read())["removed"]["complaints"] == 0   # open by default
 
 
 def test_the_demo_password_can_start_fresh_without_an_officer_login(server, monkeypatch):
@@ -385,4 +388,4 @@ def test_the_demo_password_can_start_fresh_without_an_officer_login(server, monk
     good = json.loads(attempt("the-demo-password").read())
     assert good["removed"] == {"complaints": 0, "citizens": 0, "workers": 0}
     html = fetch(server + "/share")[2].decode("utf-8")
-    assert "Only the DC Office login" not in html and "demo password" in html
+    assert "Only the DC Office login" not in html and 'id="freshSection" hidden' in html
