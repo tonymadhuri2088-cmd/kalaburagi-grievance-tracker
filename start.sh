@@ -11,5 +11,8 @@ python portal/manage.py restore
 python portal/manage.py seed-demo --password "$DEMO_PASSWORD" > /dev/null
 if [ "$SEED_SAMPLE" = "1" ]; then
   python portal/manage.py seed-sample
+else
+  # No invented demo data: remove any that an earlier start added. Real complaints are never touched.
+  python portal/manage.py purge-sample
 fi
 exec python portal/server.py

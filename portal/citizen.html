@@ -67,6 +67,11 @@
     </div>
 
     <div class="login-card" id="loginCard">
+      <div class="open-sessions" id="openSessions" hidden>
+        <b>Already logged in on this device</b>
+        <div class="os-list"></div>
+        <p class="hint">To use another role here, pick its tab below and log in. The logins above stay open.</p>
+      </div>
       <div class="seg three" role="tablist" aria-label="Choose how to log in">
         <button type="button" role="tab" id="tabCitizen" data-tab="citizen" aria-selected="true" aria-controls="citizenPanel">
           <svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#user"/></svg>User Login
@@ -218,10 +223,26 @@
 <script>
   const { $, post, get, say } = Portal;
 
-  // A citizen who is still logged in goes straight to the home page. An officer goes to the dashboard.
+  // One device can hold a citizen, a worker and an officer login at the same time. With exactly one login the
+  // page goes straight to its home. With more than one (or when you chose "Sign in as another role") it stays here and
+  // lists the open logins, so you can open any of them or log in as another.
+  const switching = new URLSearchParams(window.location.search).get("switch") === "1";   // read before the address is tidied
   (async () => {
-    const me = await get("/api/me");
-    if (me.ok && Portal.HOME_FOR[me.data.role]) window.location.replace(Portal.HOME_FOR[me.data.role]);
+    const result = await get("/api/sessions");
+    const list = result.ok ? (result.data.sessions || []) : [];
+    if (list.length === 1 && !switching) { window.location.replace(Portal.HOME_FOR[list[0].role]); return; }
+    if (!list.length) return;
+    const names = { citizen: "Citizen", worker: "Worker", officer: "Officer" };
+    const box = $("openSessions");
+    const row = box.querySelector(".os-list");
+    list.forEach((item) => {
+      const link = document.createElement("a");
+      link.className = "btn small outline";
+      link.href = Portal.HOME_FOR[item.role];
+      link.textContent = `${names[item.role]}: ${item.name}`;
+      row.appendChild(link);
+    });
+    box.hidden = false;
   })();
 
   // User Login and Officer Login tabs

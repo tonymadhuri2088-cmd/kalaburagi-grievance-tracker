@@ -134,11 +134,24 @@
       if (event.key === "Escape") close();
     });
     $("logoutButton").addEventListener("click", logout);
+    if (!panel.querySelector(".switch-link")) {
+      const other = el("a", { className: "btn outline block switch-link", href: "/?switch=1" }, "Sign in as another role");
+      other.style.marginBottom = "8px";
+      $("logoutButton").parentNode.insertBefore(other, $("logoutButton"));
+    }
+  }
+
+  // Which role this page belongs to, so logging out here leaves the other roles on this device logged in.
+  function pageRole() {
+    const path = window.location.pathname;
+    if (path.startsWith("/officer") || path.startsWith("/limits")) return "officer";
+    if (path.startsWith("/worker")) return "worker";
+    return "citizen";
   }
 
   async function logout() {
-    try { await post("/api/logout", {}); } catch (err) { /* the session ends either way */ }
-    window.location.replace("/");
+    try { await post("/api/logout", { role: pageRole() }); } catch (err) { /* the session ends either way */ }
+    window.location.replace("/?switch=1");
   }
 
   // Pages for a logged-in citizen call this first. Anyone else is sent to the right place.
@@ -146,9 +159,10 @@
 
   // Pages for one kind of account call this first. Anyone else is sent to their own page, or to log in.
   async function requireRole(role) {
-    const me = await get("/api/me");
+    const me = await get("/api/me?role=" + encodeURIComponent(role));
     if (me.ok && me.data.role === role) return me.data;
-    window.location.replace(me.ok && HOME_FOR[me.data.role] ? HOME_FOR[me.data.role] : "/");
+    // Not logged in as this role on this device: go to the login screen with this role's tab open.
+    window.location.replace("/?switch=1&tab=" + encodeURIComponent(role));
     return new Promise(() => {}); // the page is changing; stop here
   }
 

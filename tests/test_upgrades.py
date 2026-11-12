@@ -258,3 +258,83 @@ def test_the_first_page_has_the_install_bar_and_a_visible_language_switch(server
     assert 'data-set-lang="en"' in html and 'data-set-lang="kn"' in html
     kannada = (ROOT / "portal" / "assets" / "i18n.js").read_text(encoding="utf-8")
     assert '"Install this app on your phone"' in kannada
+
+
+# One device, several roles
+
+class Browser:
+    """A tiny browser: keeps cookies, so one 'device' can hold several logins."""
+
+    def __init__(self, base):
+        import http.cookiejar
+        self.base = base
+        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+    def call(self, path, body=None):
+        data = json.dumps(body).encode() if body is not None else None
+        request = urllib.request.Request(self.base + path, data=data, headers={"Content-Type": "application/json"} if data else {},
+                                         method="POST" if data else "GET")
+        try:
+            with self.opener.open(request, timeout=10) as response:
+                return response.status, json.loads(response.read() or b"{}")
+        except urllib.error.HTTPError as error:
+            return error.code, json.loads(error.read() or b"{}")
+
+
+def test_one_device_can_be_citizen_and_officer_at_once(kalaburagi, tmp_path):
+    store = Store(tmp_path / "portal.db")
+    seed_demo_officers(store, "a-long-password")
+    portal = Portal(store)
+    portal.sign_up_citizen("Ravi Kumar", PHONE, "12 Main Road, Kalaburagi", 5, now=NOW)
+    httpd = portal_server.make_server("127.0.0.1", 0, portal, Sessions())
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    try:
+        device = Browser(f"http://127.0.0.1:{httpd.server_address[1]}")
+        code = device.call("/api/citizen/login", {"contact": PHONE})[1]["code"]
+        assert device.call("/api/citizen/verify", {"contact": PHONE, "code": code})[0] == 200
+        assert device.call("/api/officer/login", {"username": "district.head", "password": "a-long-password"})[0] == 200
+        roles = [s["role"] for s in device.call("/api/sessions")[1]["sessions"]]
+        assert roles == ["citizen", "officer"]                       # both are logged in on the same device
+        assert device.call("/api/me?role=citizen")[1]["role"] == "citizen"
+        assert device.call("/api/me?role=officer")[1]["role"] == "officer"
+        assert device.call("/api/me?role=worker")[0] == 401
+        assert device.call("/api/me?role=admin")[0] == 400
+        # logging out of one role leaves the other open
+        assert device.call("/api/logout", {"role": "officer"})[0] == 200
+        assert [s["role"] for s in device.call("/api/sessions")[1]["sessions"]] == ["citizen"]
+        assert device.call("/api/me?role=officer")[0] == 401
+        # no role: everything on this device ends
+        assert device.call("/api/logout", {})[0] == 200
+        assert device.call("/api/sessions")[1]["sessions"] == []
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        set_limit_overrides({})
+
+
+def test_the_first_page_lists_open_logins_and_does_not_hide_the_login_tabs(server):
+    html = fetch(server + "/")[2].decode("utf-8")
+    assert 'id="openSessions"' in html and "/api/sessions" in html and "switch" in html
+
+
+# Removing the invented demo data
+
+def test_purging_the_sample_data_keeps_real_complaints(desk):
+    from complaint_portal.seed_sample import purge_sample_data, seed_sample_data
+    real = file_road(desk)                                           # a real complaint filed first
+    assert desk.store.list_complaints()
+    store = desk.store
+    # seed_sample_data only runs on an empty database, so add the invented citizens and complaints directly
+    store_complaints = len(store.list_complaints())
+    from complaint_portal import seed_sample
+    for name, mobile, address, ward in seed_sample.CITIZENS[:2]:
+        desk.sign_up_citizen(name, mobile, address, ward, now=NOW)
+        desk.register(name, mobile, "No water has come to our street for three days. Please fix it.", ward_number=ward,
+                      use_llm=False, now=NOW, address=address, kind="civic", category="water_supply", photos=[photo()] * 3)
+    assert len(store.list_complaints()) == store_complaints + 2
+    done = purge_sample_data(desk)
+    assert done["complaints"] == 2 and done["citizens"] == 2
+    left = [row["id"] for row in store.list_complaints()]
+    assert left == [real["id"]]
+    assert store.get_citizen(PHONE) is not None                      # the real citizen stays
+    assert purge_sample_data(desk) == {"citizens": 0, "complaints": 0}   # safe to run again

@@ -32,7 +32,7 @@ from datetime import timedelta
 from http import cookies
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, quote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -162,7 +162,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, {"complaints": self.portal.citizen_complaints(mobile)})
                 return
             if path == "/api/me":
-                self._send_json(200, self._who_am_i())
+                wanted = (parse_qs(urlsplit(self.path).query).get("role") or [None])[0]
+                self._send_json(200, self._who_am_i(wanted))
+                return
+            if path == "/api/sessions":
+                # Every login this browser holds. One device can be a citizen, a worker and an officer at once.
+                self._send_json(200, {"sessions": self._active_roles()})
                 return
             if path == "/api/officer/me":
                 self._send_json(200, self._officer_view())
@@ -248,15 +253,20 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, {"ok": True}, extra_headers)
                 return
             if path == "/api/logout":
-                # Ends whichever session this browser has. Only the logout control shows this.
-                self.citizen_sessions.drop(self._session_token(CITIZEN_COOKIE))
-                self.sessions.drop(self._session_token())
-                self.worker_sessions.drop(self._session_token(WORKER_COOKIE))
-                extra_headers["Set-Cookie"] = [
-                    _cookie("", max_age=0, name=CITIZEN_COOKIE),
-                    _cookie("", max_age=0),
-                    _cookie("", max_age=0, name=WORKER_COOKIE),
-                ]
+                # Ends the login for the role named in the request (citizen, officer or worker), and leaves the
+                # other roles on this device logged in. With no role, every login on this browser ends.
+                role = self._read_json().get("role")
+                cookies = []
+                if role in (None, "citizen"):
+                    self.citizen_sessions.drop(self._session_token(CITIZEN_COOKIE))
+                    cookies.append(_cookie("", max_age=0, name=CITIZEN_COOKIE))
+                if role in (None, "officer"):
+                    self.sessions.drop(self._session_token())
+                    cookies.append(_cookie("", max_age=0))
+                if role in (None, "worker"):
+                    self.worker_sessions.drop(self._session_token(WORKER_COOKIE))
+                    cookies.append(_cookie("", max_age=0, name=WORKER_COOKIE))
+                extra_headers["Set-Cookie"] = cookies
                 self._send_json(200, {"ok": True}, extra_headers)
                 return
             if path == "/api/worker/signup":
@@ -392,7 +402,7 @@ class Handler(BaseHTTPRequestHandler):
         ]
         return {"url": base, "district": self.portal.locations.district, "demo_minutes": self.portal.demo_minutes or 0,
                 "officers": demo_accounts[:12],
-                "links": {"citizen": base + "/", "worker": base + "/worker/signup", "officer": base + "/",
+                "links": {"citizen": base + "/", "worker": base + "/worker/signup", "officer": base + "/?switch=1&tab=officer",
                           "about": base + "/about"}}
 
     def _send_qr(self, png: bool) -> None:
@@ -527,8 +537,36 @@ class Handler(BaseHTTPRequestHandler):
     def _officer_view(self) -> Dict[str, Any]:
         return self.portal.officer_view(self._current_officer())
 
-    def _who_am_i(self) -> Dict[str, Any]:
-        """The account behind this browser, for the account panel. Citizens and officers are both checked."""
+    def _active_roles(self) -> List[Dict[str, Any]]:
+        found = []
+        for role in ("citizen", "worker", "officer"):
+            try:
+                who = self._who_am_i(role)
+            except PortalError:
+                continue
+            found.append({"role": role, "name": who.get("name") or who.get("username") or role})
+        return found
+
+    def _who_am_i(self, only: Optional[str] = None) -> Dict[str, Any]:
+        """The account behind this browser, for the account panel. With only set, just that role is looked at."""
+        if only is not None:
+            if only not in ("citizen", "worker", "officer"):
+                raise PortalError(400, "Unknown role.")
+            if only == "citizen":
+                mobile = self.citizen_sessions.who(self._session_token(CITIZEN_COOKIE), utcnow())
+                if mobile is None:
+                    raise PortalError(401, "Nobody is logged in.")
+                return {"role": "citizen", **self.portal.citizen_profile(mobile)}
+            if only == "worker":
+                mobile = self.worker_sessions.who(self._session_token(WORKER_COOKIE), utcnow())
+                if mobile is None:
+                    raise PortalError(401, "Nobody is logged in.")
+                return {"role": "worker", **self.workers.profile(mobile)}
+            officer_id = self.sessions.officer_id(self._session_token(), utcnow())
+            officer = self.portal.store.get_officer(officer_id) if officer_id is not None else None
+            if officer is None:
+                raise PortalError(401, "Nobody is logged in.")
+            return {"role": "officer", **self.portal.officer_view(officer)}
         mobile = self.citizen_sessions.who(self._session_token(CITIZEN_COOKIE), utcnow())
         if mobile is not None:
             return {"role": "citizen", **self.portal.citizen_profile(mobile)}

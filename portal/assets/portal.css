@@ -728,3 +728,7 @@ html[lang="kn"] .brand-tag { font-size: 11px; }
 .lang-pills { display: inline-flex; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 4px; gap: 4px; margin: 0 0 18px; }
 .lang-pills button { border: 0; background: transparent; color: var(--white); font-size: 16px; font-weight: 700; padding: 7px 20px; border-radius: 999px; cursor: pointer; }
 .lang-pills button[aria-pressed="true"] { background: var(--white); color: var(--navy); }
+
+.open-sessions { background: var(--section); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+.open-sessions .os-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.open-sessions .hint { margin: 0; font-size: 13px; }

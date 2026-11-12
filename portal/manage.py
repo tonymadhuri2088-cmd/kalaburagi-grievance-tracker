@@ -31,7 +31,7 @@ from complaint_portal.auth import hash_password  # noqa: E402
 from complaint_portal.locations import load_locations  # noqa: E402
 from complaint_portal.rules import DISTRICT_HEAD, FIELD_ALL, FIELDS, STAGES  # noqa: E402
 from complaint_portal.seed import seed_demo_officers  # noqa: E402
-from complaint_portal.seed_sample import seed_sample_data  # noqa: E402
+from complaint_portal.seed_sample import purge_sample_data, seed_sample_data  # noqa: E402
 from complaint_portal.store import Store  # noqa: E402
 from complaint_portal.workflow import Portal, utcnow  # noqa: E402
 
@@ -64,6 +64,12 @@ def cmd_seed_sample(args) -> None:
         print("The database already has complaints, so nothing was added.")
         return
     print(f"Added {done['citizens']} invented citizens and {done['complaints']} invented complaints (filed at different times in the past).")
+
+
+def cmd_purge_sample(args) -> None:
+    done = purge_sample_data(Portal(open_store(args)))
+    print(f"Removed {done['complaints']} invented complaints and {done['citizens']} invented citizens." if done["complaints"] or done["citizens"]
+          else "No invented demo data to remove.")
 
 
 def cmd_add_officer(args) -> None:
@@ -136,6 +142,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     sample = commands.add_parser("seed-sample", help="Add invented citizens and complaints so the dashboards have data.")
     sample.set_defaults(func=cmd_seed_sample)
+
+    purge = commands.add_parser("purge-sample", help="Remove the invented demo citizens and complaints (real data is kept).")
+    purge.set_defaults(func=cmd_purge_sample)
 
     add = commands.add_parser("add-officer", help="Add one officer account.")
     add.add_argument("--username", required=True)

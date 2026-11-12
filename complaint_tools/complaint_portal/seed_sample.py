@@ -40,6 +40,44 @@ COMPLAINTS = [
 ]
 
 
+SAMPLE_MOBILES = [mobile for _, mobile, _, _ in CITIZENS]
+
+
+def purge_sample_data(portal: Portal) -> Dict[str, int]:
+    """Remove the invented citizens and their complaints (mobile numbers 9000000001 to 9000000006), and nothing else.
+
+    Real complaints, accounts and the officers are not touched. Safe to run again: it does nothing when there is
+    no invented data left.
+    """
+    import json
+    from pathlib import Path
+
+    marks = ",".join("?" for _ in SAMPLE_MOBILES)
+    store = portal.store
+    with store._conn() as conn:   # pylint: disable=protected-access
+        rows = conn.execute(f"SELECT id, photo_files FROM complaints WHERE citizen_contact IN ({marks})", SAMPLE_MOBILES).fetchall()
+        ids = [row["id"] for row in rows]
+        for table in ("events", "notices", "reminders", "messages"):
+            for start in range(0, len(ids), 200):
+                chunk = ids[start:start + 200]
+                conn.execute(f"DELETE FROM {table} WHERE complaint_id IN ({','.join('?' for _ in chunk)})", chunk)
+        conn.execute(f"DELETE FROM complaints WHERE citizen_contact IN ({marks})", SAMPLE_MOBILES)
+        removed_citizens = conn.execute(f"DELETE FROM citizens WHERE mobile IN ({marks})", SAMPLE_MOBILES).rowcount
+        conn.execute(f"DELETE FROM wa_contacts WHERE mobile IN ({marks})", SAMPLE_MOBILES) if _has_table(conn, "wa_contacts") else None
+    folder = Path(store.path).parent / "photos"
+    for row in rows:
+        try:
+            for name in json.loads(row["photo_files"] or "[]"):
+                (folder / Path(name).name).unlink(missing_ok=True)
+        except (ValueError, OSError):
+            pass
+    return {"citizens": max(removed_citizens, 0), "complaints": len(ids)}
+
+
+def _has_table(conn, name: str) -> bool:
+    return conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone() is not None
+
+
 def seed_sample_data(portal: Portal, now: datetime = None) -> Dict[str, int]:
     """Add the invented citizens and complaints. Return how many of each were added."""
     now = now or utcnow()

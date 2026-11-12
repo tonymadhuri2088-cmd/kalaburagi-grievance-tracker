@@ -2,7 +2,7 @@
 # On Render: New > Blueprint > pick this repository. Render asks for DEMO_PASSWORD.
 # The free web plan has no disk, so the portal keeps a copy of its data in the Postgres database (DATABASE_URL, see
 # complaint_tools/complaint_portal/durable.py) and restores it after every restart. The free database lasts 30 days.
-# SEED_SAMPLE=1 adds invented demo data the first time only.
+# SEED_SAMPLE=1 adds invented demo data the first time only. It is off (0), and each start removes any invented data.
 databases:
   - name: kalaburagi-data
     plan: free
@@ -23,7 +23,7 @@ services:
       - key: DEMO_PASSWORD
         sync: false
       - key: SEED_SAMPLE
-        value: "1"
+        value: "0"
       - key: COMPLAINT_PORTAL_DEMO_MINUTES
         value: "3"
       # WhatsApp (optional): add these in the Render dashboard, never in this file.
