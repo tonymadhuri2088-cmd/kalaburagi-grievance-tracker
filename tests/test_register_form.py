@@ -57,13 +57,14 @@ def test_emergency_is_urgent_and_needs_no_photos(tmp_path):
     assert view["photo_count"] == 0
 
 
-def test_civic_needs_exactly_three_photos(tmp_path):
+def test_civic_photos_are_optional_but_at_most_three(tmp_path):
     portal = make_portal(tmp_path)
-    with pytest.raises(PortalError) as short:
-        register(portal, kind="civic", category="water_supply", photos=[jpeg(), jpeg()])
-    assert "3 photos" in short.value.message
-    with pytest.raises(PortalError):
+    for photos in ([], [jpeg()], [jpeg(), jpeg()]):
+        view = register(portal, kind="civic", category="water_supply", photos=photos)
+        assert view["photo_count"] == len(photos)
+    with pytest.raises(PortalError) as many:
         register(portal, kind="civic", category="water_supply", photos=[jpeg()] * 4)
+    assert "at most 3" in many.value.message
 
 
 def test_civic_photos_are_saved_and_counted(tmp_path):
@@ -103,7 +104,7 @@ def test_old_apps_without_the_new_fields_still_file_the_complaint(tmp_path):
 def test_register_page_offers_both_kinds_and_the_three_photos():
     page = (ROOT / "portal" / "register.html").read_text(encoding="utf-8")
     assert 'value="emergency"' in page and 'value="civic"' in page
-    assert "Upload 3 photos" in page or "Add photo" in page
+    assert "Optional. Add up to 3 photos" in page and "Add photo" in page
     assert "Add address" in page and "todayLine" in page
     for _, label in EMERGENCY_CATEGORIES + CIVIC_CATEGORIES:
         assert label.replace("&", "&amp;") in page or label in page

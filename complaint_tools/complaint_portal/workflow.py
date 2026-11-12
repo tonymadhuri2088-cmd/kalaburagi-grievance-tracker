@@ -310,10 +310,9 @@ class Portal:
         if category not in keys:
             raise PortalError(400, "Choose the type of complaint from the list.")
         images = photos if isinstance(photos, list) else []
-        if kind == CIVIC and len(images) != PHOTOS_REQUIRED:
-            raise PortalError(400, f"Upload {PHOTOS_REQUIRED} photos of the problem.")
-        if kind == POLICE and len(images) > PHOTOS_REQUIRED:
-            raise PortalError(400, f"Upload at most {PHOTOS_REQUIRED} documents or photos.")
+        # Photos are optional for civic and police complaints: a citizen may have none to show.
+        if kind in (CIVIC, POLICE) and len(images) > PHOTOS_REQUIRED:
+            raise PortalError(400, f"Upload at most {PHOTOS_REQUIRED} photos or documents.")
         if kind == EMERGENCY:
             images = []  # emergencies are not held up for photos
         return kind, category, images
@@ -353,7 +352,7 @@ class Portal:
         """File a complaint. address is where the problem is (None: not given); landmark is optional.
 
         kind is "emergency" or "civic" (the citizen's choice); category is one key from categories.py.
-        photos is a list of up to PHOTOS_REQUIRED images as data: URLs. Civic complaints need all of them.
+        photos is a list of up to PHOTOS_REQUIRED images as data: URLs. Photos are optional.
         Older apps send none of these, and then the complaint is filed as before.
         """
         now = now or utcnow()

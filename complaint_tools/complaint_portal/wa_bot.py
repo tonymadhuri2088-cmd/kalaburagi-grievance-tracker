@@ -124,8 +124,9 @@ S: Dict[str, Dict[str, str]] = {
     "ask_place": {"en": "Where is the problem? Send the street and area, or share a location pin. "
                         "Send *same* to use your home address.",
                   "kn": "ಸಮಸ್ಯೆ ಎಲ್ಲಿದೆ? ರಸ್ತೆ ಮತ್ತು ಪ್ರದೇಶ ಕಳುಹಿಸಿ ಅಥವಾ ಲೊಕೇಶನ್ ಪಿನ್ ಹಂಚಿಕೊಳ್ಳಿ. ನಿಮ್ಮ ಮನೆ ವಿಳಾಸಕ್ಕಾಗಿ *same* ಕಳುಹಿಸಿ."},
-    "ask_photos_civic": {"en": "Please send {n} photos of the problem, one after another. ({have} of {n} received)",
-                         "kn": "ದಯವಿಟ್ಟು ಸಮಸ್ಯೆಯ {n} ಫೋಟೋಗಳನ್ನು ಒಂದರ ನಂತರ ಒಂದು ಕಳುಹಿಸಿ. ({have}/{n} ಬಂದಿವೆ)"},
+    "ask_photos_civic": {"en": "Photos are optional. You may send up to {n} photos of the problem. Send *done* when finished, or *skip* to go without. "
+                               "({have} of {n} received)",
+                         "kn": "ಫೋಟೋಗಳು ಐಚ್ಛಿಕ. ನೀವು ಸಮಸ್ಯೆಯ {n} ವರೆಗೆ ಫೋಟೋ ಕಳುಹಿಸಬಹುದು. ಮುಗಿದ ನಂತರ *done*, ಬೇಡವಾದರೆ *skip* ಕಳುಹಿಸಿ. ({have}/{n} ಬಂದಿವೆ)"},
     "ask_photos_police": {"en": "You may send up to {n} photos or PDF documents. Send *done* when finished, or *skip* to go without. "
                                "({have} of {n} received)",
                           "kn": "ನೀವು {n} ವರೆಗೆ ಫೋಟೋ ಅಥವಾ PDF ದಾಖಲೆಗಳನ್ನು ಕಳುಹಿಸಬಹುದು. ಮುಗಿದ ನಂತರ *done*, ಬೇಡವಾದರೆ *skip* ಕಳುಹಿಸಿ. ({have}/{n} ಬಂದಿವೆ)"},
@@ -521,7 +522,7 @@ class WhatsAppBot:
             chat.go("reg_place")
             return
         photos = data.get("photos", [])
-        if kind == CIVIC and len(photos) < PHOTOS_REQUIRED:
+        if kind == CIVIC and not data.get("photos_done"):
             chat.say("ask_photos_civic", n=PHOTOS_REQUIRED, have=len(photos))
             chat.go("reg_photos")
             return
@@ -606,15 +607,9 @@ class WhatsAppBot:
                 self._advance_registration(chat)
             return
         word = message.text.strip().lower()
-        if kind == POLICE and word in ("done", "skip", "no", "ಮುಗಿದಿದೆ", "ಬೇಡ"):
+        if kind in (CIVIC, POLICE) and word in ("done", "skip", "no", "ಮುಗಿದಿದೆ", "ಬೇಡ"):
             data["photos_done"] = True
             self._advance_registration(chat)
-            return
-        if kind == CIVIC and len(photos) < PHOTOS_REQUIRED:
-            if word in ("done", "skip"):
-                chat.say("photo_need", left=PHOTOS_REQUIRED - len(photos))
-            else:
-                chat.say("photo_wait")
             return
         chat.say("photo_wait")
 

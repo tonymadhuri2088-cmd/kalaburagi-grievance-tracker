@@ -95,10 +95,10 @@
 
       <!-- 3. Photos: only for not emergency -->
       <section class="reg-step" id="photoStep" aria-labelledby="photoTitle">
-        <h2 class="reg-title" id="photoTitle"><span class="reg-no">3</span><span id="photoTitleText">Photos of the problem</span> <span class="req" id="photoReq">*</span></h2>
-        <p class="hint" id="photoHint">Upload 3 photos. JPEG, PNG or WebP. Large photos are made smaller on your phone before they are sent.</p>
+        <h2 class="reg-title" id="photoTitle"><span class="reg-no">3</span><span id="photoTitleText">Photos of the problem (optional)</span></h2>
+        <p class="hint" id="photoHint">Optional. Add up to 3 photos if you have them. JPEG, PNG or WebP. Large photos are made smaller on your phone before they are sent.</p>
         <div class="photo-grid" id="photoGrid"></div>
-        <p class="hint" id="photoCount">0 of 3 photos added</p>
+        <p class="hint" id="photoCount">0 of 3 photos added (optional)</p>
       </section>
 
       <!-- 4. Address: picked like a delivery address, with Add address -->
@@ -306,7 +306,7 @@
     }));
     $("photoCount").textContent = kind() === "police"
       ? `${photos.filter(Boolean).length} of ${PHOTOS_NEEDED} files added (optional)`
-      : `${photos.filter(Boolean).length} of ${PHOTOS_NEEDED} photos added`;
+      : `${photos.filter(Boolean).length} of ${PHOTOS_NEEDED} photos added (optional)`;
   }
 
   // Make the picture smaller before it is sent, so a phone photo is never too large.
@@ -446,11 +446,10 @@
     $("emergencyNote").hidden = !isEmergency;
     $("policeNote").hidden = !isPolice;
     $("photoStep").hidden = isEmergency;
-    $("photoTitleText").textContent = isPolice ? "Documents or photos (optional)" : "Photos of the problem";
-    $("photoReq").hidden = isPolice;
+    $("photoTitleText").textContent = isPolice ? "Documents or photos (optional)" : "Photos of the problem (optional)";
     $("photoHint").textContent = isPolice
       ? "You may add up to 3 files: JPEG, PNG, WebP or PDF, each under 4 MB. Do not add anything you do not want the police station to see."
-      : "Upload 3 photos. JPEG, PNG or WebP. Large photos are made smaller on your phone before they are sent.";
+      : "Optional. Add up to 3 photos if you have them. JPEG, PNG or WebP. Large photos are made smaller on your phone before they are sent.";
     $("addrNo").textContent = isEmergency ? "3" : "4";
     $("descNo").textContent = isEmergency ? "4" : "5";
     photos = [];
@@ -493,9 +492,6 @@
   function checkForm() {
     const picked = document.querySelector('input[name="category"]:checked');
     if (!picked) return fail("Choose the type of complaint from the list.", $("categoryList"));
-    if (kind() === "civic" && photos.filter(Boolean).length !== PHOTOS_NEEDED) {
-      return fail(`Add ${PHOTOS_NEEDED} photos of the problem.`, $("photoStep"));
-    }
     if (!currentAddress()) return fail("Choose the address of the problem, or add one.", $("addrList"));
     if ($("complaint").value.trim().length < 10) {
       return fail("Describe the problem in at least 10 characters.", $("complaint"));

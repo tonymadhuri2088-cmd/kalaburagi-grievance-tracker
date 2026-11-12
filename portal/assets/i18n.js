@@ -161,6 +161,9 @@
       "ಜೀವಕ್ಕೆ ಅಪಾಯವಿದ್ದರೆ ಮೊದಲು 112ಗೆ ಕರೆ ಮಾಡಿ. ನಂತರ ಸರಿಯಾದ ಅಧಿಕಾರಿಗೆ ಕಾಣುವಂತೆ ಈ ನಮೂನೆ ಭರ್ತಿ ಮಾಡಿ.",
     "Choose the problem": "ಸಮಸ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
     "Photos of the problem": "ಸಮಸ್ಯೆಯ ಫೋಟೋಗಳು",
+    "Photos of the problem (optional)": "ಸಮಸ್ಯೆಯ ಫೋಟೋಗಳು (ಐಚ್ಛಿಕ)",
+    "Optional. Add up to 3 photos if you have them. JPEG, PNG or WebP. Large photos are made smaller on your phone before they are sent.":
+      "ಐಚ್ಛಿಕ. ನಿಮ್ಮ ಬಳಿ ಇದ್ದರೆ 3 ಫೋಟೋಗಳವರೆಗೆ ಸೇರಿಸಿ. JPEG, PNG ಅಥವಾ WebP. ದೊಡ್ಡ ಫೋಟೋಗಳನ್ನು ಕಳುಹಿಸುವ ಮೊದಲು ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿ ಚಿಕ್ಕದಾಗಿಸಲಾಗುತ್ತದೆ.",
     "Photos and documents": "ಫೋಟೋಗಳು ಮತ್ತು ದಾಖಲೆಗಳು",
     "Upload 3 photos. JPEG, PNG or WebP. Large photos are made smaller on your phone before they are sent.":
       "3 ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ. JPEG, PNG ಅಥವಾ WebP. ದೊಡ್ಡ ಫೋಟೋಗಳನ್ನು ಕಳುಹಿಸುವ ಮೊದಲು ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿ ಚಿಕ್ಕದಾಗಿಸಲಾಗುತ್ತದೆ.",
@@ -325,6 +328,7 @@
   // Text with numbers or names in it: [pattern, function that builds the Kannada].
   const PATTERNS = [
     [/^(\d+) of (\d+) photos added$/, (m) => `${m[2]} ರಲ್ಲಿ ${m[1]} ಫೋಟೋ ಸೇರಿಸಲಾಗಿದೆ`],
+    [/^(\d+) of (\d+) photos added \(optional\)$/, (m) => `${m[2]} ರಲ್ಲಿ ${m[1]} ಫೋಟೋ ಸೇರಿಸಲಾಗಿದೆ (ಐಚ್ಛಿಕ)`],
     [/^(\d+) of (\d+) files added$/, (m) => `${m[2]} ರಲ್ಲಿ ${m[1]} ಫೈಲ್ ಸೇರಿಸಲಾಗಿದೆ`],
     [/^Time limit: (.+)$/, (m) => `ಕಾಲಮಿತಿ: ${m[1]}`],
     [/^Counting down to (.+)$/, (m) => `ಕೊನೆಯ ಸಮಯ: ${m[1]}`],

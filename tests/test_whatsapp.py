@@ -300,7 +300,7 @@ def test_a_new_citizen_signs_up_and_registers_a_civic_complaint(setup, tmp_path)
     assert "Which type" in say(bot, "2")                      # Not emergency
     assert "Describe the problem" in say(bot, "4")            # Roads and Footpaths
     assert "Where is the problem" in say(bot, POTHOLE)
-    assert "3 photos" in say(bot, "same")
+    assert "Photos are optional" in say(bot, "same")
     channel.media.update({"u1": (JPEG, "image/jpeg"), "u2": (JPEG, "image/jpeg"), "u3": (JPEG, "image/jpeg")})
     assert "1 of 3" in say(bot, "", media=["u1"])
     assert "Please check your complaint" in say(bot, "", media=["u2", "u3"])
@@ -314,13 +314,15 @@ def test_a_new_citizen_signs_up_and_registers_a_civic_complaint(setup, tmp_path)
     assert channel.sent == []
 
 
-def test_photos_are_required_for_civic_complaints(setup):
-    _, channel, bot, _ = setup
+def test_photos_are_optional_for_civic_complaints(setup):
+    portal, channel, bot, _ = setup
     sign_up_and_start(bot)
     say(bot, "2"), say(bot, "4"), say(bot, POTHOLE), say(bot, "same")
-    assert "I still need 3" in say(bot, "done")
     assert "Please send a photo" in say(bot, "hmm")
     assert "could not use" in say(bot, "", media=["missing"])
+    assert "Please check" in say(bot, "skip")
+    assert "Complaint registered" in say(bot, "1")
+    assert portal.store.list_complaints()[0]["photo_files"] in (None, "[]")
 
 
 def test_a_pdf_or_text_file_is_not_accepted_as_a_photo(setup):
