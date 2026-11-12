@@ -178,8 +178,7 @@
     ok.hidden = err.hidden = true;
     var password = prompt("Enter the demo password to continue.");
     if (!password) return;
-    var typed = prompt("This removes ALL complaints, citizens and workers. Type RESET to confirm.");
-    if (typed !== "RESET") return;
+    if (!confirm("This removes ALL complaints, citizens and workers. Are you sure?")) return;
     try {
       var res = await fetch("/api/district/reset-demo", { method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "RESET", password: password }) });
