@@ -1,6 +1,6 @@
 // Service worker: lets the portal install as an app and open its screens quickly.
 // It never stores anything from /api, so complaints, logins and codes are always live.
-const VERSION = "kgt-v1";
+const VERSION = "kgt-v2";
 const SHELL = ["/assets/portal.css", "/assets/portal.js", "/assets/i18n.js", "/assets/icons.svg", "/assets/pwa.js", "/offline"];
 
 self.addEventListener("install", (event) => {
