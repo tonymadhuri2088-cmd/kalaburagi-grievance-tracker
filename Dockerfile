@@ -17,8 +17,11 @@ ENV PYTHONUNBUFFERED=1 \
     HOST=0.0.0.0 \
     COMPLAINT_PORTAL_DB=/data/portal.db
 
-# The web portal uses only the Python standard library, so nothing is installed here. (requirements.txt is for the
-# Neuro-SAN agent network and the tests, and is not needed to host the portal.)
+# The web portal uses only the Python standard library (the QR code library is included in complaint_tools/vendor).
+# The one install is pg8000, a small pure-Python Postgres driver, used only to keep a copy of the data when
+# DATABASE_URL is set. (requirements.txt is for the Neuro-SAN agent network and the tests.)
+RUN pip install --no-cache-dir pg8000==1.31.2
+
 COPY . .
 
 RUN mkdir -p /data

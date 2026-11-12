@@ -1,7 +1,14 @@
-# Render Blueprint: one free web service built from the Dockerfile.
+# Render Blueprint: one free web service built from the Dockerfile, plus a free Postgres database.
 # On Render: New > Blueprint > pick this repository. Render asks for DEMO_PASSWORD.
-# The free plan has no disk, so data is cleared when the service restarts. SEED_SAMPLE=1 fills it with invented
-# demo data each time.
+# The free web plan has no disk, so the portal keeps a copy of its data in the Postgres database (DATABASE_URL, see
+# complaint_tools/complaint_portal/durable.py) and restores it after every restart. The free database lasts 30 days.
+# SEED_SAMPLE=1 adds invented demo data the first time only.
+databases:
+  - name: kalaburagi-data
+    plan: free
+    databaseName: portal
+    user: portal
+    ipAllowList: []   # only services inside Render can connect
 services:
   - type: web
     name: kalaburagi-grievance-tracker
@@ -9,6 +16,10 @@ services:
     plan: free
     healthCheckPath: /api/config
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kalaburagi-data
+          property: connectionString
       - key: DEMO_PASSWORD
         sync: false
       - key: SEED_SAMPLE

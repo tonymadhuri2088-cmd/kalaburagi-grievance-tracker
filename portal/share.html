@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Open the demo - Kalaburagi Grievance Tracker</title>
+<link rel="stylesheet" href="/assets/portal.css">
+<style>
+  .share-hero { background: linear-gradient(135deg, var(--navy), var(--primary)); color: var(--white); padding: 44px 0; }
+  .share-hero .container { display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center; }
+  .share-hero h1 { color: inherit; margin: 0 0 12px; font-size: 38px; line-height: 1.15; }
+  .share-hero p { margin: 0 0 18px; color: var(--banner-sub); font-size: 18px; max-width: 560px; }
+  .qr-card { background: var(--white); color: var(--text); border-radius: 18px; padding: 22px; text-align: center; box-shadow: var(--shadow); }
+  .qr-card img { width: min(300px, 100%); height: auto; display: block; margin: 0 auto 10px; }
+  .qr-card .link { font-weight: 700; color: var(--navy); word-break: break-all; font-size: 17px; }
+  .qr-card .row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 18px; }
+  .role { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 20px; box-shadow: var(--soft-shadow); }
+  .role .device { display: inline-block; background: var(--section); color: var(--primary-dark); border-radius: 999px; padding: 3px 12px; font-weight: 700; font-size: 13px; }
+  .role h3 { margin: 10px 0 6px; color: var(--navy); font-size: 22px; }
+  .role img { width: 132px; height: 132px; float: right; margin: 0 0 8px 12px; }
+  .role ol { margin: 10px 0 0; padding-left: 20px; line-height: 1.55; }
+  .role .open { margin-top: 12px; clear: both; }
+  table.plain { border-collapse: collapse; width: 100%; background: var(--white); border-radius: 12px; overflow: hidden; }
+  table.plain th, table.plain td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  table.plain th { background: var(--section); color: var(--label); }
+  .note { background: var(--warn-bg); color: var(--warn); border-radius: 12px; padding: 12px 16px; margin-top: 16px; }
+  .ok { background: var(--success-bg); color: var(--success); border-radius: 12px; padding: 12px 16px; margin-top: 16px; }
+  .pad { padding: 34px 0 10px; }
+  @media (max-width: 900px) { .share-hero .container, .roles { grid-template-columns: 1fr; } .share-hero h1 { font-size: 30px; } }
+  @media print { .topbar, .roles, .pad, .noprint { display: none !important; } .share-hero { background: none; color: #000; } .share-hero p { color: #000; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="container">
+    <a class="brand" href="/">
+      <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#drop"/></svg></span>
+      <span><span class="brand-name">Kalaburagi Grievance Tracker</span><span class="brand-tag">Follow-up and reminders for citizen grievances</span></span>
+    </a>
+    <nav class="topnav" aria-label="Main">
+      <a href="/">Sign in</a>
+      <a href="/about">How it works</a>
+      <a href="/share" class="active" aria-current="page">Open on your phone</a>
+    </nav>
+  </div>
+</header>
+
+<section class="share-hero">
+  <div class="container">
+    <div>
+      <h1>Scan to open the live demo</h1>
+      <p>Every complaint is registered once, followed up with reminders, and escalated up the officer ladder to the DC Office when a time limit passes. Point a phone camera at the code, or type the link.</p>
+      <div class="noprint">
+        <a class="btn light" href="/">Open the portal</a>
+        <a class="btn on-blue" href="/about">See the agents, AI and data</a>
+      </div>
+    </div>
+    <div class="qr-card">
+      <img id="mainQr" src="/qr.svg" alt="QR code that opens the portal">
+      <div class="link" id="mainLink">...</div>
+      <div class="row noprint">
+        <button class="btn outline" type="button" id="copyButton">Copy link</button>
+        <button class="btn outline" type="button" onclick="window.print()">Print this code</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main class="container">
+  <section class="pad">
+    <h2 style="color:var(--navy);margin:0">Try all three roles, on three devices</h2>
+    <p class="muted-note">Each person uses their own device. The three screens talk to the same server, so a complaint filed on one appears on the others straight away.</p>
+    <div class="roles">
+      <div class="role">
+        <span class="device">Phone 1</span>
+        <h3>Citizen</h3>
+        <img id="qrCitizen" alt="QR code for the citizen login">
+        <ol>
+          <li>Open the link and choose <b>Sign up</b>. Enter a name, a mobile number and an address in Kalaburagi.</li>
+          <li>Log in with the 6-digit code.</li>
+          <li><b>Register Complaint</b>: pick the category, add 3 photos, describe the problem.</li>
+          <li><b>Track Complaint</b> shows each step, the time limit and the reminders.</li>
+        </ol>
+        <a class="btn outline open" id="openCitizen" href="/signup">Open citizen sign up</a>
+      </div>
+      <div class="role">
+        <span class="device">Phone 2</span>
+        <h3>Worker</h3>
+        <img id="qrWorker" alt="QR code for the worker sign up">
+        <ol>
+          <li>Open <b>Worker sign up</b>: name, mobile number, address, ward and department.</li>
+          <li>Log in with the 6-digit code.</li>
+          <li><b>Accept</b> a registered complaint, do the work, then ask for a completion code.</li>
+          <li>The citizen must share their code before it is closed.</li>
+        </ol>
+        <a class="btn outline open" id="openWorker" href="/worker/signup">Open worker sign up</a>
+      </div>
+      <div class="role">
+        <span class="device">Laptop</span>
+        <h3>Officer</h3>
+        <img id="qrOfficer" alt="QR code for the officer login">
+        <ol>
+          <li>Open the portal and choose the <b>Officer Login</b> tab.</li>
+          <li>Use a demo account from the table below. The team gives you the password.</li>
+          <li>See the complaints for your department, reminders under <b>Notices</b>, and reply or escalate.</li>
+          <li><b>district.head</b> sees the whole district.</li>
+        </ol>
+        <a class="btn outline open" id="openOfficer" href="/">Open officer login</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="pad">
+    <h2 style="color:var(--navy);margin:0 0 10px">Demo officer accounts</h2>
+    <table class="plain" id="officerTable"><thead><tr><th>Username</th><th>Office</th></tr></thead><tbody></tbody></table>
+    <div class="ok" id="clockNote" hidden></div>
+    <div class="note">All names, numbers and complaints in this demo are invented. Do not enter real personal data.</div>
+  </section>
+</main>
+<script>
+(function () {
+  function q(url) { return "/qr.svg?u=" + encodeURIComponent(url); }
+  function setText(id, text) { var node = document.getElementById(id); if (node) node.textContent = text; }
+  fetch("/api/share").then(function (r) { return r.json(); }).then(function (info) {
+    setText("mainLink", info.url.replace(/^https?:\/\//, ""));
+    document.getElementById("mainQr").src = q(info.url + "/");
+    document.getElementById("qrCitizen").src = q(info.links.citizen);
+    document.getElementById("qrWorker").src = q(info.links.worker);
+    document.getElementById("qrOfficer").src = q(info.links.officer);
+    var body = document.querySelector("#officerTable tbody");
+    (info.officers || []).forEach(function (officer) {
+      var row = document.createElement("tr");
+      var a = document.createElement("td"); a.textContent = officer.username; a.style.fontWeight = "700";
+      var b = document.createElement("td"); b.textContent = officer.name;
+      row.appendChild(a); row.appendChild(b); body.appendChild(row);
+    });
+    if (info.demo_minutes) {
+      var note = document.getElementById("clockNote");
+      note.hidden = false;
+      note.textContent = "Demo clock: every time limit on this site is " + info.demo_minutes + " minutes, so you can watch a reminder go out and a complaint move up to the next officer in a few minutes. Real limits are days.";
+    }
+    document.getElementById("copyButton").addEventListener("click", function () {
+      var button = this;
+      function done() { button.textContent = "Copied"; setTimeout(function () { button.textContent = "Copy link"; }, 1600); }
+      if (navigator.clipboard) { navigator.clipboard.writeText(info.url + "/").then(done, done); } else { done(); }
+    });
+  }).catch(function () { setText("mainLink", location.host); });
+})();
+</script>
+</body>
+</html>

@@ -9,6 +9,7 @@ Run from the project root:
     python portal/manage.py list-pending
     python portal/manage.py approve-officer --username water.depot2
     python portal/manage.py check-overdue
+    python portal/manage.py restore
 
 Fields: water, sewerage, billing, new_connection, general, or all (District Head Office only).
 Levels: depot, deputy_ae, area_engineer, superintendent_engineer, district_head.
@@ -25,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "complaint_tools"))
 
 # pylint: disable=wrong-import-position
+from complaint_portal import durable  # noqa: E402
 from complaint_portal.auth import hash_password  # noqa: E402
 from complaint_portal.locations import load_locations  # noqa: E402
 from complaint_portal.rules import DISTRICT_HEAD, FIELD_ALL, FIELDS, STAGES  # noqa: E402
@@ -48,6 +50,12 @@ def cmd_seed_demo(args) -> None:
     for username in created:
         print(f"  {username}")
     print("Change these passwords before any real use. Existing accounts were left as they were.")
+
+
+def cmd_restore(args) -> None:
+    """Put back the saved copy of the data (from DATABASE_URL) before the portal starts, when this host has none."""
+    path = args.db or os.environ.get("COMPLAINT_PORTAL_DB", str(DEFAULT_DB))
+    print(durable.restore(path, force=args.force))
 
 
 def cmd_seed_sample(args) -> None:
@@ -147,6 +155,10 @@ def build_parser() -> argparse.ArgumentParser:
     approve = commands.add_parser("approve-officer", help="Approve an officer sign-up so it can log in.")
     approve.add_argument("--username", required=True)
     approve.set_defaults(func=cmd_approve_officer)
+
+    restore = commands.add_parser("restore", help="Restore the saved copy of the data (DATABASE_URL), if this host has none.")
+    restore.add_argument("--force", action="store_true", help="Replace the database file even if one exists.")
+    restore.set_defaults(func=cmd_restore)
 
     check = commands.add_parser("check-overdue", help="Escalate complaints past their time limit and send due reminders.")
     check.set_defaults(func=cmd_check_overdue)

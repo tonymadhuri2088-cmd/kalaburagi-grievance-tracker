@@ -22,10 +22,12 @@ import json
 import mimetypes
 import os
 import re
+import signal
 import sys
 import threading
 import time
 import traceback
+import urllib.request
 from datetime import timedelta
 from http import cookies
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -35,8 +37,11 @@ from urllib.parse import parse_qs, quote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "complaint_tools"))
+sys.path.insert(0, str(ROOT / "complaint_tools" / "vendor"))   # segno, a small pure-Python QR code library
 
 # pylint: disable=wrong-import-position
+from complaint_portal import durable  # noqa: E402
+from complaint_portal.about import about_info  # noqa: E402
 from complaint_portal.auth import CITIZEN_SESSION_DAYS, Sessions, next_midnight_india  # noqa: E402
 from complaint_portal.rules import DISTRICT_HEAD  # noqa: E402
 from complaint_portal.store import Store  # noqa: E402
@@ -60,6 +65,8 @@ PAGES = {
     "/officer/signup": HERE / "officer-signup.html",
     "/worker": HERE / "worker.html",                # worker board: complaints to accept, allotted tasks
     "/worker/signup": HERE / "worker-signup.html",
+    "/share": HERE / "share.html",                  # QR code, link, and how to use three devices
+    "/about": HERE / "about.html",                  # agents and models, time limits, data
 }
 # The shared stylesheet, script and icons. Only these files are served from portal/assets.
 ASSETS = {
@@ -115,6 +122,15 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if path == "/api/config":
                 self._send_json(200, self.portal.public_config())
+                return
+            if path == "/api/about":
+                self._send_json(200, about_info(self.portal))
+                return
+            if path == "/api/share":
+                self._send_json(200, self._share_info())
+                return
+            if path in ("/qr.svg", "/qr.png"):
+                self._send_qr(path.endswith(".png"))
                 return
             if path == WHATSAPP_PATH:
                 self._whatsapp_challenge()
@@ -331,6 +347,50 @@ class Handler(BaseHTTPRequestHandler):
             traceback.print_exc()
             self._send_json(500, {"error": "Something went wrong on the server."})
 
+    # Sharing: the link and its QR code
+
+    def _base_url(self) -> str:
+        """The address people use to reach this portal: PUBLIC_URL if set, otherwise what this request came in on."""
+        configured = (os.environ.get("PUBLIC_URL") or "").strip().rstrip("/")
+        if configured:
+            return configured
+        proto = (self.headers.get("X-Forwarded-Proto") or "http").split(",")[0].strip()
+        host = (self.headers.get("X-Forwarded-Host") or self.headers.get("Host") or "localhost").split(",")[0].strip()
+        return f"{proto}://{host}"
+
+    def _share_info(self) -> Dict[str, Any]:
+        base = self._base_url()
+        demo_accounts = [
+            {"username": officer["username"], "name": officer["name"], "level": officer["level"]}
+            for officer in self.portal.store.list_officers()
+            if officer.get("status", "approved") == "approved" and "." in officer["username"]
+            and (officer["level"] == DISTRICT_HEAD or officer["level"] == "depot")
+        ]
+        return {"url": base, "district": self.portal.locations.district, "demo_minutes": self.portal.demo_minutes or 0,
+                "officers": demo_accounts[:12],
+                "links": {"citizen": base + "/", "worker": base + "/worker/signup", "officer": base + "/",
+                          "about": base + "/about"}}
+
+    def _send_qr(self, png: bool) -> None:
+        """A QR code for ?u=<link> (default: this portal's address), as SVG or PNG."""
+        import io
+
+        import segno   # vendored in complaint_tools/vendor
+
+        query = {key: values[0] for key, values in parse_qs(urlsplit(self.path).query).items()}
+        target = (query.get("u") or self._base_url() + "/").strip()
+        if not re.match(r"^https?://[^\s]{3,400}$", target):
+            self._send_json(400, {"error": "Use ?u=<a web address>."})
+            return
+        code = segno.make(target, error="m")
+        buffer = io.BytesIO()
+        if png:
+            code.save(buffer, kind="png", scale=12, border=3, dark="#023668")
+            self._send_bytes(200, buffer.getvalue(), "image/png", {"Cache-Control": "public, max-age=300"})
+        else:
+            code.save(buffer, kind="svg", scale=10, border=3, dark="#023668", xmldecl=False)
+            self._send_bytes(200, buffer.getvalue(), "image/svg+xml", {"Cache-Control": "public, max-age=300"})
+
     # WhatsApp webhook
 
     def _whatsapp_challenge(self) -> None:
@@ -521,6 +581,23 @@ def start_overdue_check(portal: Portal, seconds: float) -> threading.Thread:
     return thread
 
 
+def start_keep_awake(url: str, seconds: float = 600) -> threading.Thread:
+    """Free hosts put a service to sleep after about 15 minutes without visitors. Asking for our own public address
+    every 10 minutes counts as a visit, so the demo link stays awake."""
+
+    def run() -> None:
+        while True:
+            time.sleep(seconds)
+            try:
+                urllib.request.urlopen(url.rstrip("/") + "/api/config", timeout=30).read()
+            except Exception:
+                pass
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    return thread
+
+
 def main() -> None:
     load_env_file(ROOT / ".env")  # SMS settings, if the .env file exists
     parser = argparse.ArgumentParser(description="Run the complaint portal on this computer.")
@@ -539,8 +616,11 @@ def main() -> None:
     args = parser.parse_args()
 
     sms = sender_from_env()
-    portal = Portal(Store(args.db), demo_minutes=args.demo_minutes, sms=sms)
-    sessions = Sessions()
+    store = Store(args.db)
+    saver = durable.Saver(args.db)
+    store.on_change = saver.changed   # a copy of the data is kept outside this host's disk (see durable.py)
+    portal = Portal(store, demo_minutes=args.demo_minutes, sms=sms)
+    sessions = Sessions(store, "officer")
     channel, whatsapp_note = channel_from_env()
     bot = None
     if channel is not None:
@@ -555,8 +635,13 @@ def main() -> None:
         if digits:
             join = (os.environ.get("WHATSAPP_JOIN_TEXT") or "Hi").strip()
             portal.whatsapp_info = {"number": "+" + digits, "link": f"https://wa.me/{digits}?text={quote(join)}"}
-    httpd = make_server(args.host, args.port, portal, sessions, Sessions(), whatsapp=bot)
+    httpd = make_server(args.host, args.port, portal, sessions, Sessions(store, "citizen"),
+                        worker_sessions=Sessions(store, "worker"), whatsapp=bot)
     start_overdue_check(portal, args.check_seconds)
+    saver.start()
+    public = (os.environ.get("PUBLIC_URL") or "").strip()
+    if public.startswith("https://") and os.environ.get("KEEP_AWAKE", "1") != "0":
+        start_keep_awake(public)
 
     print(f"Complaint portal listening on {args.host}, port {args.port}")
     print(f"Open http://127.0.0.1:{args.port}/ on this computer. Citizens and officers both log in there.")
@@ -572,13 +657,23 @@ def main() -> None:
               "No ANTHROPIC_API_KEY: WhatsApp messages are understood by keywords and menus.")
     if portal.demo_minutes:
         print(f"Demo time limits: every new time limit is {portal.demo_minutes:g} minute(s).")
+    print("Data copy: " + ("kept in the DATABASE_URL database." if saver.enabled else
+                           "not set up (DATABASE_URL is empty); data stays on this host's disk."))
+    if public.startswith("https://") and os.environ.get("KEEP_AWAKE", "1") != "0":
+        print("Keeping this service awake by visiting " + public + " every 10 minutes.")
     print("Press Ctrl+C to stop.")
+
+    def stop(_signum, _frame) -> None:   # the host sends SIGTERM when it restarts the service
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, stop)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
         httpd.server_close()
+        saver.stop()
 
 
 if __name__ == "__main__":

@@ -160,3 +160,13 @@ If something goes wrong, `python portal/manage.py check-overdue` runs the remind
 - `complaint_tools/complaint_portal/messages.py`: the follow-up message texts in English and Kannada.
 - `portal/assets/i18n.js`: the Kannada switch for the screens.
 - `tests/test_solvathon.py`: tests for everything above.
+
+
+## Final round additions (12 Nov 2026)
+
+- `/share` shows a QR code and link for the live site, and how to use three devices (citizen phone, worker phone, officer laptop). `/qr.svg` and `/qr.png` make the code (add `?u=<address>` for another link).
+- `/about` ("How it works") lists the agents and models and where each is used, where the number of days come from, and the datasets. It reads the charter and data files, so it always matches what the portal does.
+- Data is kept when the host restarts: with `DATABASE_URL` set (Render Postgres), `durable.py` saves a copy of the database and photos a few seconds after any change and restores it at start (`manage.py restore`). Logins are saved too.
+- With `ANTHROPIC_API_KEY` set, Claude (claude-haiku-5-5) picks the complaint type from the charter list when a complaint is registered. It can only choose a listed type; days, owners and replies still come from the charter. Limit 300 calls a day (`COMPLAINTROUTER_CLAUDE_DAILY_LIMIT`).
+- With a public `PUBLIC_URL`, the service visits itself every 10 minutes so the free plan does not sleep (`KEEP_AWAKE=0` turns this off).
+- Offline fallback: `HOST=0.0.0.0 PORT=8000 python portal/server.py` on a laptop; phones on the same Wi-Fi open `http://<laptop address>:8000/share`.

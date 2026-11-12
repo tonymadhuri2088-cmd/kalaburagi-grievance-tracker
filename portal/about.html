@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>How it works - Kalaburagi Grievance Tracker</title>
+<link rel="stylesheet" href="/assets/portal.css">
+<style>
+  .about-hero { background: linear-gradient(135deg, var(--navy), var(--primary)); color: var(--white); padding: 40px 0; }
+  .about-hero h1 { color: var(--white); margin: 0 0 10px; font-size: 36px; }
+  .about-hero p { margin: 0; color: var(--banner-sub); font-size: 18px; max-width: 760px; }
+  section.block { padding: 30px 0 4px; }
+  section.block h2 { color: var(--navy); margin: 0 0 6px; font-size: 26px; }
+  section.block > p.sub { margin: 0 0 14px; color: var(--muted); max-width: 820px; }
+  .flow-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; counter-reset: s; }
+  .flow-step { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--soft-shadow); }
+  .flow-step b { display: block; color: var(--navy); margin-bottom: 4px; }
+  .flow-step::before { counter-increment: s; content: counter(s); display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 700; margin-bottom: 8px; }
+  table.plain { border-collapse: collapse; width: 100%; background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: var(--soft-shadow); }
+  table.plain th, table.plain td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.plain th { background: var(--section); color: var(--label); }
+  .tag { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 12.5px; font-weight: 700; }
+  .tag.llm { background: #e8e1fa; color: #4a2a9a; }
+  .tag.code { background: var(--section); color: var(--primary-dark); }
+  .tag.rules { background: #e9f3e9; color: var(--success); }
+  .live { font-size: 12.5px; font-weight: 700; }
+  .live.on { color: var(--success); } .live.off { color: var(--muted); }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .card2 { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--soft-shadow); }
+  .card2 b { color: var(--navy); } .card2 code { color: var(--primary-dark); font-size: 13px; }
+  .principle { background: var(--section); border-left: 5px solid var(--primary); border-radius: 10px; padding: 14px 18px; margin: 0 0 14px; font-size: 18px; color: var(--navy); }
+  .note { background: var(--warn-bg); color: var(--warn); border-radius: 12px; padding: 12px 16px; margin: 12px 0; }
+  .scroll { overflow-x: auto; }
+  ul.limits { line-height: 1.7; }
+  @media (max-width: 900px) { .flow-steps, .cards { grid-template-columns: 1fr; } .about-hero h1 { font-size: 28px; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="container">
+    <a class="brand" href="/">
+      <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#drop"/></svg></span>
+      <span><span class="brand-name">Kalaburagi Grievance Tracker</span><span class="brand-tag">Follow-up and reminders for citizen grievances</span></span>
+    </a>
+    <nav class="topnav" aria-label="Main">
+      <a href="/">Sign in</a>
+      <a href="/about" class="active" aria-current="page">How it works</a>
+      <a href="/share">Open on your phone</a>
+    </nav>
+  </div>
+</header>
+
+<section class="about-hero">
+  <div class="container">
+    <h1>How it works</h1>
+    <p>The problem: complaints get filed, then nobody follows up. This system gives every complaint an owner, a time limit, automatic reminders and an escalation path, and keeps the citizen informed at each step.</p>
+  </div>
+</section>
+
+<main class="container">
+  <section class="block">
+    <h2>The life of a complaint</h2>
+    <div class="flow-steps">
+      <div class="flow-step"><b>Register</b>The citizen picks a category, adds photos and an address. The address is matched to a zone.</div>
+      <div class="flow-step"><b>Route</b>Five tools classify it, look up its time limit, find the owning office and officer, and draft the reply.</div>
+      <div class="flow-step"><b>Do the work</b>A worker in that zone accepts it and does the job.</div>
+      <div class="flow-step"><b>Close with proof</b>The worker asks for a completion code. It goes to the citizen, who confirms the fix.</div>
+      <div class="flow-step"><b>Remind</b>A check runs every 30 seconds. The officer gets reminders at 50% and 80% of the time limit.</div>
+      <div class="flow-step"><b>Escalate</b>If the limit passes, the complaint moves up one level automatically, all the way to the DC Office.</div>
+      <div class="flow-step"><b>Not fixed?</b>The citizen can say it is not fixed. It goes back up, and the history is kept.</div>
+      <div class="flow-step"><b>Track</b>The citizen sees every step, and gets messages in English or Kannada.</div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Agents and models: what is used, and where</h2>
+    <p class="sub">Principle: <b>models for language, code for facts.</b> A model is good at reading messy wording. It is not a safe source for deadlines or officer names, so those never come from a model.</p>
+    <div class="principle">The model may only <b>choose one type from a fixed list</b>. Every day count, owner, escalation step and reply sentence comes from the charter file through plain tools. A wrong answer is rejected and the keyword rules are used.</div>
+    <div class="scroll"><table class="plain" id="agentTable"><thead><tr><th>Component</th><th>Kind</th><th>Model</th><th>What it does</th><th>On this site</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="block">
+    <h2>Where do the number of days come from?</h2>
+    <p class="sub" id="limitsNote"></p>
+    <div class="note" id="limitsHonest"></div>
+    <div class="scroll"><table class="plain" id="limitsTable"><thead><tr><th>Complaint type</th><th>Department</th><th>Time limit at each level, in days</th><th>Days until the DC Office</th></tr></thead><tbody></tbody></table></div>
+    <p class="sub" style="margin-top:12px">Published timelines a department would use instead of the sample numbers:</p>
+    <ul id="refs"></ul>
+  </section>
+
+  <section class="block">
+    <h2>Data and datasets</h2>
+    <div class="cards" id="dataCards"></div>
+    <p class="sub" style="margin-top:10px" id="storageText"></p>
+  </section>
+
+  <section class="block" style="padding-bottom:40px">
+    <h2>What we say plainly</h2>
+    <ul class="limits" id="limits"></ul>
+  </section>
+</main>
+<script>
+(function () {
+  function el(tag, text, cls) { var n = document.createElement(tag); if (text !== undefined && text !== null) n.textContent = text; if (cls) n.className = cls; return n; }
+  fetch("/api/about").then(function (r) { return r.json(); }).then(function (a) {
+    var body = document.querySelector("#agentTable tbody");
+    a.agents.forEach(function (item) {
+      var tr = el("tr");
+      tr.appendChild(el("td", item.name)).style.fontWeight = "700";
+      var kind = el("td"); var cls = item.kind === "LLM" ? "llm" : (item.kind === "Rules" ? "rules" : "code");
+      kind.appendChild(el("span", item.kind, "tag " + cls)); tr.appendChild(kind);
+      tr.appendChild(el("td", item.model || "none"));
+      tr.appendChild(el("td", item.does));
+      var live = el("td"); live.appendChild(el("span", item.live ? "Running" : "Not running here", "live " + (item.live ? "on" : "off"))); tr.appendChild(live);
+      body.appendChild(tr);
+    });
+    var t = a.time_limits;
+    document.getElementById("limitsNote").textContent = t.rule + " " + t.after_last + " " + t.reminders;
+    document.getElementById("limitsHonest").textContent = t.note + (a.demo_minutes ? " On this demo site each time limit is shortened to " + a.demo_minutes + " minutes so you can watch it work." : "");
+    var lb = document.querySelector("#limitsTable tbody");
+    t.rows.forEach(function (row) {
+      var tr = el("tr");
+      tr.appendChild(el("td", row.label)).style.fontWeight = "700";
+      tr.appendChild(el("td", row.department));
+      tr.appendChild(el("td", row.ladder.map(function (s) { return s.office + ": " + s.days; }).join("  ›  ")));
+      tr.appendChild(el("td", String(row.total_days)));
+      lb.appendChild(tr);
+    });
+    var refs = document.getElementById("refs");
+    t.references.forEach(function (ref) { var li = el("li"); var link = el("a", ref.text); link.href = ref.url; link.target = "_blank"; link.rel = "noopener"; li.appendChild(link); refs.appendChild(li); });
+    var cards = document.getElementById("dataCards");
+    a.data.forEach(function (d) { var c = el("div", null, "card2"); c.appendChild(el("b", d.name)); c.appendChild(el("div", d.detail)); c.appendChild(el("code", d.file)); cards.appendChild(c); });
+    document.getElementById("storageText").textContent = a.storage.text;
+    var lim = document.getElementById("limits");
+    a.limits.forEach(function (s) { lim.appendChild(el("li", s)); });
+  });
+})();
+</script>
+</body>
+</html>

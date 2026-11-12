@@ -9,7 +9,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Sequence
+from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS officers (
@@ -66,6 +66,12 @@ CREATE TABLE IF NOT EXISTS workers (
     department TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    expires TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS notices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -193,6 +199,8 @@ class Store:
 
     def __init__(self, path: str) -> None:
         self.path = str(path)
+        # Called after any write is saved. The server uses it to keep a durable copy (see durable.py).
+        self.on_change: Optional[Callable[[], None]] = None
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         with self._conn() as conn:
             conn.executescript(SCHEMA)
@@ -205,8 +213,31 @@ class Store:
         try:
             yield conn
             conn.commit()
+            if self.on_change is not None and conn.total_changes:
+                self.on_change()
         finally:
             conn.close()
+
+    # Login sessions (so people stay logged in when the host restarts)
+
+    def save_session(self, token_hash: str, kind: str, subject: str, expires: str) -> None:
+        with self._conn() as conn:
+            conn.execute("INSERT OR REPLACE INTO sessions (token_hash, kind, subject, expires) VALUES (?, ?, ?, ?)",
+                         (token_hash, kind, subject, expires))
+
+    def get_session(self, token_hash: str, kind: str) -> Optional[Dict[str, Any]]:
+        with self._conn() as conn:
+            row = conn.execute("SELECT subject, expires FROM sessions WHERE token_hash = ? AND kind = ?",
+                               (token_hash, kind)).fetchone()
+        return dict(row) if row else None
+
+    def delete_session(self, token_hash: str) -> None:
+        with self._conn() as conn:
+            conn.execute("DELETE FROM sessions WHERE token_hash = ?", (token_hash,))
+
+    def purge_sessions(self, now_iso: str) -> None:
+        with self._conn() as conn:
+            conn.execute("DELETE FROM sessions WHERE expires < ?", (now_iso,))
 
     # Citizen accounts
 

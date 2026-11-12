@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+import json
 import secrets
 import threading
 from datetime import datetime, timedelta, timezone
@@ -45,21 +46,34 @@ def verify_password(password: str, stored: Optional[str]) -> bool:
 
 
 class Sessions:
-    """Login sessions kept in memory. A server restart logs everyone out.
+    """Login sessions. A server restart does not log anyone out when a store is given.
 
-    The portal keeps two sets: one for officers (the stored value is the officer's ID) and one
-    for citizens (the stored value is the citizen's mobile number).
+    The portal keeps three sets: one for officers (the stored value is the officer's ID), one for citizens and one for
+    workers (the stored value is the mobile number). With a store, each session is also saved in the database (only a
+    hash of the token is kept), so people stay logged in after the host restarts. Without one, sessions live in memory.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, store: Any = None, kind: str = "") -> None:
         self._items: Dict[str, Tuple[Any, datetime]] = {}
         self._lock = threading.Lock()
+        self._store = store
+        self._kind = kind or "session"
+
+    @staticmethod
+    def _hash(token: str) -> str:
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
     def create(self, subject: Any, now: datetime, expires: Optional[datetime] = None) -> str:
         """Start a session and return its token. It ends at expires (default: SESSION_HOURS from now)."""
         token = secrets.token_urlsafe(32)
+        end = expires or now + timedelta(hours=SESSION_HOURS)
         with self._lock:
-            self._items[token] = (subject, expires or now + timedelta(hours=SESSION_HOURS))
+            self._items[token] = (subject, end)
+        if self._store is not None:
+            try:
+                self._store.save_session(self._hash(token), self._kind, json.dumps(subject), end.isoformat())
+            except Exception:   # a saved copy is a convenience; the login itself still works
+                pass
         return token
 
     def who(self, token: Optional[str], now: datetime) -> Optional[Any]:
@@ -68,13 +82,22 @@ class Sessions:
             return None
         with self._lock:
             item = self._items.get(token)
-            if item is None:
-                return None
-            subject, expires = item
-            if now >= expires:
-                del self._items[token]
-                return None
-            return subject
+        if item is None and self._store is not None:
+            try:
+                row = self._store.get_session(self._hash(token), self._kind)
+                if row:
+                    item = (json.loads(row["subject"]), datetime.fromisoformat(row["expires"]))
+                    with self._lock:
+                        self._items[token] = item
+            except Exception:
+                item = None
+        if item is None:
+            return None
+        subject, expires = item
+        if now >= expires:
+            self.drop(token)
+            return None
+        return subject
 
     def officer_id(self, token: Optional[str], now: datetime) -> Optional[Any]:
         """Same as who(), named for officer sessions."""
@@ -85,6 +108,11 @@ class Sessions:
         if token:
             with self._lock:
                 self._items.pop(token, None)
+            if self._store is not None:
+                try:
+                    self._store.delete_session(self._hash(token))
+                except Exception:
+                    pass
 
 
 class OneTimeCodes:

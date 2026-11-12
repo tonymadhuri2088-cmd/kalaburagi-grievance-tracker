@@ -12,8 +12,10 @@ Urgency always comes from the keyword classifier, so the model cannot lower it.
 import json
 import os
 import re
+import threading
 import urllib.error
 import urllib.request
+from datetime import date
 from typing import Any, Dict, Optional
 
 from .common import load_charter
@@ -22,6 +24,12 @@ from .intake import classify_complaint
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_MODEL = "llama3.1"
 DEFAULT_TIMEOUT_SECONDS = 120
+CLAUDE_URL = "https://api.anthropic.com/v1/messages"
+DEFAULT_CLAUDE_MODEL = "claude-haiku-5-5"
+DEFAULT_CLAUDE_DAILY_LIMIT = 300
+CLAUDE_TIMEOUT_SECONDS = 20
+_claude_use = {"day": None, "count": 0}
+_claude_lock = threading.Lock()
 
 
 def ollama_settings() -> Dict[str, Any]:
@@ -31,6 +39,51 @@ def ollama_settings() -> Dict[str, Any]:
         "model": os.environ.get("COMPLAINTROUTER_MODEL", DEFAULT_MODEL),
         "timeout": float(os.environ.get("COMPLAINTROUTER_LLM_TIMEOUT", DEFAULT_TIMEOUT_SECONDS)),
     }
+
+
+def claude_settings() -> Optional[Dict[str, Any]]:
+    """Settings for the Claude API, or None when no ANTHROPIC_API_KEY is set (then Ollama and keywords are used)."""
+    key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not key:
+        return None
+    try:
+        limit = int(os.environ.get("COMPLAINTROUTER_CLAUDE_DAILY_LIMIT", DEFAULT_CLAUDE_DAILY_LIMIT))
+    except ValueError:
+        limit = DEFAULT_CLAUDE_DAILY_LIMIT
+    return {"key": key, "model": os.environ.get("COMPLAINTROUTER_CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL),
+            "timeout": CLAUDE_TIMEOUT_SECONDS, "daily_limit": limit}
+
+
+def ask_claude(prompt: str, settings: Dict[str, Any]) -> Optional[str]:
+    """Send the prompt to the Claude API. Return the model's text, or None (no key, limit used up, or any error).
+
+    The answer is only ever used after parse_llm_answer has checked it against the charter list, so a wrong or
+    manipulated answer cannot create a type, a deadline or an owner.
+    """
+    with _claude_lock:
+        today = date.today()
+        if _claude_use["day"] != today:
+            _claude_use["day"], _claude_use["count"] = today, 0
+        if _claude_use["count"] >= settings["daily_limit"]:
+            return None
+        _claude_use["count"] += 1
+    body = json.dumps({"model": settings["model"], "max_tokens": 120,
+                       "messages": [{"role": "user", "content": prompt}]}).encode("utf-8")
+    request = urllib.request.Request(
+        CLAUDE_URL, data=body, method="POST",
+        headers={"content-type": "application/json", "x-api-key": settings["key"],
+                 "anthropic-version": "2023-06-01"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=settings["timeout"]) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        blocks = payload.get("content") if isinstance(payload, dict) else None
+        for block in blocks or []:
+            if isinstance(block, dict) and block.get("type") == "text":
+                return block.get("text")
+    except (OSError, ValueError):
+        return None
+    return None
 
 
 def build_prompt(complaint: str, charter: Dict[str, Any]) -> str:
@@ -106,11 +159,12 @@ def ask_ollama(prompt: str, settings: Dict[str, Any]) -> Optional[str]:
     return text if isinstance(text, str) else None
 
 
-def _merge(keyword: Dict[str, Any], choice: Dict[str, Any], charter: Dict[str, Any], model: str) -> Dict[str, Any]:
+def _merge(keyword: Dict[str, Any], choice: Dict[str, Any], charter: Dict[str, Any], model: str,
+           who: str = "the local LLM") -> Dict[str, Any]:
     """Combine the model's valid choice with the keyword result (urgency and matched terms)."""
     complaint_type = choice["complaint_type"]
     entry = charter["complaint_types"][complaint_type]
-    notes = [f"Type chosen by the local LLM ({model}). Confirm it matches the complaint."]
+    notes = [f"Type chosen by {who} ({model}). Confirm it matches the complaint."]
 
     subtype = choice["subtype"]
     if entry.get("subtypes") and subtype is None:
@@ -133,7 +187,7 @@ def _merge(keyword: Dict[str, Any], choice: Dict[str, Any], charter: Dict[str, A
         "needs_human_review": True,
         "notes": notes,
         "classifier": "llm",
-        "llm_status": f"Type and subtype chosen by the local LLM ({model}).",
+        "llm_status": f"Type and subtype chosen by {who} ({model}).",
     }
 
 
@@ -147,8 +201,15 @@ def classify(complaint: str, use_llm: bool = True, settings: Optional[Dict[str, 
         fallback["llm_status"] = "Not requested; keyword classifier used."
         return fallback
 
+    prompt = build_prompt(complaint, charter)
+    claude = claude_settings() if settings is None else None
+    if claude is not None:   # Claude first when a key is set; Ollama and keywords stay as the fallbacks
+        choice = parse_llm_answer(ask_claude(prompt, claude), charter)
+        if choice is not None:
+            return _merge(keyword, choice, charter, claude["model"], who="Claude")
+
     settings = settings or ollama_settings()
-    raw = ask_ollama(build_prompt(complaint, charter), settings)
+    raw = ask_ollama(prompt, settings)
     if raw is None:
         fallback["llm_status"] = (
             f"Local LLM not reachable at {settings['base_url']}; keyword classifier used."
