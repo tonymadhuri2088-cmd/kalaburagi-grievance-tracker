@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>Open the demo - Kalaburagi Grievance Tracker</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0f2a52">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grievance">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="icon" type="image/png" href="/assets/icon-192.png">
 <link rel="stylesheet" href="/assets/portal.css">
 <style>
   .share-hero { background: linear-gradient(135deg, var(--navy), var(--primary)); color: var(--white); padding: 44px 0; }
@@ -53,6 +60,7 @@
       <h1>Scan to open the live demo</h1>
       <p>Every complaint is registered once, followed up with reminders, and escalated up the officer ladder to the DC Office when a time limit passes. Point a phone camera at the code, or type the link.</p>
       <div class="noprint">
+        <button class="btn light" type="button" data-install hidden>Install as an app</button>
         <a class="btn light" href="/">Open the portal</a>
         <a class="btn on-blue" href="/about">See the agents, AI and data</a>
       </div>
@@ -63,7 +71,11 @@
       <div class="row noprint">
         <button class="btn outline" type="button" id="copyButton">Copy link</button>
         <button class="btn outline" type="button" onclick="window.print()">Print this code</button>
+        <a class="btn outline" id="waShare" target="_blank" rel="noopener" href="#">Share on WhatsApp</a>
+        <button class="btn outline" type="button" data-native-share>Share...</button>
       </div>
+      <p class="noprint" data-install-ios hidden style="font-size:14px;margin:12px 0 0">On iPhone: tap the Share icon in Safari, then <b>Add to Home Screen</b>.</p>
+      <p class="noprint" data-installed hidden style="font-size:14px;margin:12px 0 0">You are using the installed app.</p>
     </div>
   </div>
 </section>
@@ -113,6 +125,10 @@
   </section>
 
   <section class="pad">
+    <h2 style="color:var(--navy);margin:0 0 10px">Install it like an app</h2>
+    <p class="muted-note">Open the link on a phone. On Android, tap <b>Install as an app</b> (or the browser menu, then <b>Install app</b>). On iPhone, open it in Safari, tap Share, then <b>Add to Home Screen</b>. It gets its own icon and opens full screen, with no browser bar. Nothing to download from a store.</p>
+  </section>
+  <section class="pad">
     <h2 style="color:var(--navy);margin:0 0 10px">Demo officer accounts</h2>
     <table class="plain" id="officerTable"><thead><tr><th>Username</th><th>Office</th></tr></thead><tbody></tbody></table>
     <div class="ok" id="clockNote" hidden></div>
@@ -126,6 +142,7 @@
   fetch("/api/share").then(function (r) { return r.json(); }).then(function (info) {
     setText("mainLink", info.url.replace(/^https?:\/\//, ""));
     document.getElementById("mainQr").src = q(info.url + "/");
+    document.getElementById("waShare").href = "https://wa.me/?text=" + encodeURIComponent("Try the Kalaburagi Grievance Tracker (demo, use invented data): " + info.url + "/");
     document.getElementById("qrCitizen").src = q(info.links.citizen);
     document.getElementById("qrWorker").src = q(info.links.worker);
     document.getElementById("qrOfficer").src = q(info.links.officer);
@@ -149,5 +166,6 @@
   }).catch(function () { setText("mainLink", location.host); });
 })();
 </script>
+<script src="/assets/pwa.js" defer></script>
 </body>
 </html>

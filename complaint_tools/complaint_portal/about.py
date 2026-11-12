@@ -9,7 +9,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List
 
-from complaintrouter.common import load_charter
+from complaintrouter import llm_classify
+from complaintrouter.common import limit_overrides, load_charter
 
 from . import durable
 from .rules import DEPOT, DISTRICT_HEAD, STAGES, level_name, stage_window
@@ -76,11 +77,17 @@ def about_info(portal: Any) -> Dict[str, Any]:
             "note": charter.get("label"),
             "rule": charter.get("escalation_rule"),
             "after_last": charter.get("after_last_level"),
+            "who_sets": "The District Head Office (DC Office) can change the days for any complaint type, and for each "
+                        "escalation level, on the Time limits page after logging in as district.head. Every change is "
+                        "written to a change log with who made it and when. A new limit applies to new complaints; a "
+                        "complaint already filed keeps the limit it was given.",
+            "changed": bool(limit_overrides()),
             "reminders": "Reminders go to the officer at 50% and 80% of each time limit. When the limit passes, the "
                          "complaint moves up to the next office automatically.",
             "rows": _time_limits(charter),
             "references": REFERENCES,
         },
+        "claude": llm_classify.status() | {"model": model, "configured": claude},
         "agents": [
             {"name": "Complaint form", "kind": "Rules", "model": None, "live": True,
              "does": "The citizen picks emergency, civic or police and a category from fixed lists, then adds photos and the "
@@ -93,6 +100,10 @@ def about_info(portal: Any) -> Dict[str, Any]:
              "does": "A language model reads the free text and picks one complaint type from the charter list. It cannot "
                      "write days, owners or replies. A wrong or invented answer is rejected and the keyword rules are used."
                      + ("" if claude else " In this deployment no model key is set, so the keyword rules decide.")},
+            {"name": "Photo and summary check", "kind": "LLM", "model": model if claude else None, "live": claude,
+             "does": "Claude reads the complaint and up to three photos and writes a one-line English summary and whether "
+                     "the photos match the category. It is a note for the officer to verify. It never changes the type, "
+                     "owner or deadline."},
             {"name": "Charter agent", "kind": "Coded tool", "model": None, "live": True,
              "does": "Looks up the time limit and notice for the type in the charter file. Nothing is generated."},
             {"name": "Router agent", "kind": "Coded tool", "model": None, "live": True,
@@ -132,8 +143,8 @@ def about_info(portal: Any) -> Dict[str, Any]:
                             "Postgres database and restored after a restart." if saving else
                             "Complaints are stored in the portal's SQLite database on this host."},
         "limits": [
-            "Time limits are sample numbers set by the project team, not an official citizen's charter. A department "
-            "replaces them in one JSON file.",
+            "Time limits start as sample numbers set by the project team, not an official citizen's charter. The District "
+            "Head Office changes them on the Time limits page (or a department replaces them in one JSON file).",
             "Wards 56 to 65 are placeholders, and Kannada text is a first draft that a native speaker should review.",
             "Complaint text is sent to the Claude API only when a key is set; use invented data in the demo.",
             "Police complaints are only registered and tracked. The portal never decides on an FIR.",

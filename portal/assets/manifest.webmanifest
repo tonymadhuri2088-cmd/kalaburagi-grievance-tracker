@@ -1,0 +1,23 @@
+{
+  "name": "Kalaburagi Grievance Tracker",
+  "short_name": "Grievance",
+  "description": "Register a complaint, track it, and see reminders and escalation to the DC Office.",
+  "id": "/",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f2a52",
+  "theme_color": "#0f2a52",
+  "lang": "en-IN",
+  "categories": ["government", "utilities"],
+  "icons": [
+    {"src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Register a complaint", "url": "/register", "icons": [{"src": "/assets/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Track a complaint", "url": "/track", "icons": [{"src": "/assets/icon-192.png", "sizes": "192x192"}]}
+  ]
+}

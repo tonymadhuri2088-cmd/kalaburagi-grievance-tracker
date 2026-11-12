@@ -30,6 +30,28 @@ DEFAULT_CLAUDE_DAILY_LIMIT = 300
 CLAUDE_TIMEOUT_SECONDS = 20
 _claude_use = {"day": None, "count": 0}
 _claude_lock = threading.Lock()
+_status = {"calls_ok": 0, "errors": 0, "last_error": "", "last_ok": ""}
+
+
+def note_error(message: str) -> None:
+    """Remember a failed Claude call (shown on the How-it-works page) and print the first few to the log."""
+    with _claude_lock:
+        _status["errors"] += 1
+        _status["last_error"] = message[:300]
+        if _status["errors"] <= 5:
+            print(f"Claude call failed - {message[:300]}", flush=True)
+
+
+def note_ok() -> None:
+    with _claude_lock:
+        _status["calls_ok"] += 1
+        _status["last_ok"] = date.today().isoformat()
+
+
+def status() -> dict:
+    """Is a Claude key set, and have the calls worked since this service started?"""
+    with _claude_lock:
+        return {"configured": claude_settings() is not None, **_status}
 
 
 def ollama_settings() -> Dict[str, Any]:
@@ -80,9 +102,19 @@ def ask_claude(prompt: str, settings: Dict[str, Any]) -> Optional[str]:
         blocks = payload.get("content") if isinstance(payload, dict) else None
         for block in blocks or []:
             if isinstance(block, dict) and block.get("type") == "text":
+                note_ok()
                 return block.get("text")
-    except (OSError, ValueError):
+    except urllib.error.HTTPError as error:
+        try:
+            detail = error.read().decode("utf-8", "replace")[:200]
+        except OSError:
+            detail = ""
+        note_error(f"HTTP {error.code} {detail}")
         return None
+    except (OSError, ValueError) as error:
+        note_error(f"{error.__class__.__name__}: {error}")
+        return None
+    note_error("no text in the answer")
     return None
 
 

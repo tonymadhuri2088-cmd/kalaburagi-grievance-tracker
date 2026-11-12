@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Time limits - Kalaburagi Grievance Tracker</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0f2a52">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grievance">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="icon" type="image/png" href="/assets/icon-192.png">
+<link rel="stylesheet" href="/assets/portal.css">
+<style>
+  .lim-hero { background: linear-gradient(135deg, var(--navy), var(--primary)); color: var(--white); padding: 34px 0; }
+  .lim-hero h1 { color: var(--white); margin: 0 0 8px; font-size: 32px; }
+  .lim-hero p { margin: 0; color: var(--banner-sub); font-size: 17px; max-width: 780px; }
+  section.block { padding: 26px 0 4px; }
+  section.block h2 { color: var(--navy); margin: 0 0 6px; font-size: 24px; }
+  table.plain { border-collapse: collapse; width: 100%; background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: var(--soft-shadow); }
+  table.plain th, table.plain td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  table.plain th { background: var(--section); color: var(--label); }
+  .days { width: 78px; padding: 7px 8px; font-size: 16px; border: 1px solid var(--line); border-radius: 8px; }
+  .chg { color: var(--warn); font-weight: 700; font-size: 12.5px; }
+  .def { color: var(--muted); font-size: 13px; }
+  .msg { border-radius: 12px; padding: 10px 14px; margin: 12px 0; }
+  .msg.ok { background: var(--success-bg); color: var(--success); }
+  .msg.err { background: var(--warn-bg); color: var(--warn); }
+  .note { background: var(--section); color: var(--navy); border-radius: 12px; padding: 12px 16px; margin: 12px 0; }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="container">
+    <a class="brand" href="/officer">
+      <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#drop"/></svg></span>
+      <span><span class="brand-name">Kalaburagi Grievance Tracker</span><span class="brand-tag">District Head Office</span></span>
+    </a>
+    <nav class="topnav" aria-label="Main">
+      <a href="/officer">Dashboard</a>
+      <a href="/limits" class="active" aria-current="page">Time limits</a>
+      <a href="/about">How it works</a>
+    </nav>
+  </div>
+</header>
+
+<section class="lim-hero">
+  <div class="container">
+    <h1>Time limits</h1>
+    <p>The DC Office decides how many days each office has to act. After that, the complaint moves up to the next office and reminders go out at 50% and 80% of the time.</p>
+  </div>
+</section>
+
+<main class="container" id="content" hidden>
+  <div class="note" id="appliesTo"></div>
+  <div class="msg" id="msg" hidden></div>
+
+  <section class="block">
+    <h2>First level: days to fix, by complaint type</h2>
+    <div class="scroll"><table class="plain" id="typeTable"><thead><tr><th>Complaint type</th><th>Department</th><th>Days</th><th></th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="block">
+    <h2>Escalation: days each higher office has</h2>
+    <div class="scroll"><table class="plain" id="levelTable"><thead><tr><th>Complaint group</th><th>Office</th><th>Days</th><th></th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="block">
+    <h2>Change log</h2>
+    <div class="scroll"><table class="plain" id="logTable"><thead><tr><th>When</th><th>Who</th><th>What</th><th>From</th><th>To</th></tr></thead><tbody></tbody></table></div>
+    <p style="margin:14px 0 40px"><button type="button" class="btn outline" id="resetBtn">Reset every limit to the charter file</button></p>
+  </section>
+</main>
+
+<main class="container" id="denied" hidden>
+  <p class="msg err" id="deniedText" style="margin-top:26px"></p>
+  <p><a class="btn" href="/?tab=officer&amp;reason=signin">Officer login</a></p>
+</main>
+
+<script>
+(function () {
+  function el(tag, text, cls) { var n = document.createElement(tag); if (text !== undefined && text !== null) n.textContent = text; if (cls) n.className = cls; return n; }
+  function show(text, ok) { var m = document.getElementById("msg"); m.textContent = text; m.className = "msg " + (ok ? "ok" : "err"); m.hidden = !text; }
+  async function call(method, body) {
+    var res = await fetch("/api/district/limits", { method: method, credentials: "same-origin",
+      headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+    var data = {}; try { data = await res.json(); } catch (e) {}
+    if (!res.ok) { var err = new Error(data.error || "Request failed."); err.status = res.status; throw err; }
+    return data;
+  }
+  function row(cells) { var tr = el("tr"); cells.forEach(function (c) { var td = el("td"); if (c instanceof Node) td.appendChild(c); else td.textContent = c; tr.appendChild(td); }); return tr; }
+  function editor(item, label, payload) {
+    var input = el("input"); input.type = "number"; input.min = 1; input.max = 60; input.value = item.days; input.className = "days";
+    input.setAttribute("aria-label", "Days for " + label);
+    var button = el("button", "Save", "btn small outline"); button.type = "button";
+    button.addEventListener("click", async function () {
+      var n = Number(input.value);
+      button.disabled = true;
+      try { render(await call("POST", Object.assign({ days: n }, payload))); show("Saved: " + label + " is now " + n + " days. It applies to new complaints.", true); }
+      catch (err) { show(err.message, false); } finally { button.disabled = false; }
+    });
+    var wrap = el("div"); wrap.appendChild(input);
+    var note = el("div", item.changed ? "Changed. Charter file: " + item.default : "Charter file: " + item.default, item.changed ? "chg" : "def");
+    wrap.appendChild(note);
+    return [wrap, button];
+  }
+  function render(d) {
+    document.getElementById("appliesTo").textContent = d.applies_to + (d.demo_minutes ? " This demo site shortens every limit to " + d.demo_minutes + " minutes for the live demo, so the days below are what a real deployment would use." : "");
+    var tb = document.querySelector("#typeTable tbody"); tb.textContent = "";
+    d.types.forEach(function (t) { var e = editor(t, t.label, { type: t.key }); tb.appendChild(row([t.label, t.department, e[0], e[1]])); });
+    var lb = document.querySelector("#levelTable tbody"); lb.textContent = "";
+    d.levels.forEach(function (l) { var e = editor(l, l.matrix + ", " + l.name, { matrix: l.matrix, stage: l.stage }); lb.appendChild(row([({standard:"Civic and general complaints",police:"Police complaints",health:"Health complaints"})[l.matrix] || l.matrix, l.name, e[0], e[1]])); });
+    var gb = document.querySelector("#logTable tbody"); gb.textContent = "";
+    if (!d.log.length) gb.appendChild(row(["No changes yet. The charter file's numbers are in use.", "", "", "", ""]));
+    d.log.forEach(function (g) { gb.appendChild(row([new Date(g.at).toLocaleString(), g.by_officer, g.what, g.old_value === null ? "" : String(g.old_value), g.new_value === null ? "" : String(g.new_value)])); });
+  }
+  document.getElementById("resetBtn").addEventListener("click", async function () {
+    if (!confirm("Reset every time limit to the charter file?")) return;
+    try { render(await call("POST", { reset: true })); show("Every limit is back to the charter file.", true); } catch (err) { show(err.message, false); }
+  });
+  call("GET").then(function (d) { document.getElementById("content").hidden = false; render(d); }).catch(function (err) {
+    document.getElementById("denied").hidden = false;
+    document.getElementById("deniedText").textContent = err.status === 401 ? "Log in as an officer to continue." : err.message;
+  });
+})();
+</script>
+<script src="/assets/pwa.js" defer></script>
+</body>
+</html>

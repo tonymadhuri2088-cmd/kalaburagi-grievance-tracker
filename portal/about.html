@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>How it works - Kalaburagi Grievance Tracker</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0f2a52">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grievance">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="icon" type="image/png" href="/assets/icon-192.png">
 <link rel="stylesheet" href="/assets/portal.css">
 <style>
   .about-hero { background: linear-gradient(135deg, var(--navy), var(--primary)); color: var(--white); padding: 40px 0; }
@@ -77,12 +84,14 @@
     <h2>Agents and models: what is used, and where</h2>
     <p class="sub">Principle: <b>models for language, code for facts.</b> A model is good at reading messy wording. It is not a safe source for deadlines or officer names, so those never come from a model.</p>
     <div class="principle">The model may only <b>choose one type from a fixed list</b>. Every day count, owner, escalation step and reply sentence comes from the charter file through plain tools. A wrong answer is rejected and the keyword rules are used.</div>
+    <div class="note" id="claudeLine" style="background:var(--section);color:var(--navy)"></div>
     <div class="scroll"><table class="plain" id="agentTable"><thead><tr><th>Component</th><th>Kind</th><th>Model</th><th>What it does</th><th>On this site</th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <section class="block">
     <h2>Where do the number of days come from?</h2>
     <p class="sub" id="limitsNote"></p>
+    <div class="principle" id="limitsWho"></div>
     <div class="note" id="limitsHonest"></div>
     <div class="scroll"><table class="plain" id="limitsTable"><thead><tr><th>Complaint type</th><th>Department</th><th>Time limit at each level, in days</th><th>Days until the DC Office</th></tr></thead><tbody></tbody></table></div>
     <p class="sub" style="margin-top:12px">Published timelines a department would use instead of the sample numbers:</p>
@@ -104,6 +113,10 @@
 (function () {
   function el(tag, text, cls) { var n = document.createElement(tag); if (text !== undefined && text !== null) n.textContent = text; if (cls) n.className = cls; return n; }
   fetch("/api/about").then(function (r) { return r.json(); }).then(function (a) {
+    var cl = a.claude || {};
+    var banner = document.getElementById("claudeLine");
+    banner.textContent = !cl.configured ? "Claude is not switched on here, so the keyword rules classify complaints."
+      : "Claude (" + cl.model + ") is switched on. Successful calls: " + (cl.calls_ok || 0) + ". Errors: " + (cl.errors || 0) + (cl.last_error ? ". Last error: " + cl.last_error : ".");
     var body = document.querySelector("#agentTable tbody");
     a.agents.forEach(function (item) {
       var tr = el("tr");
@@ -117,6 +130,7 @@
     });
     var t = a.time_limits;
     document.getElementById("limitsNote").textContent = t.rule + " " + t.after_last + " " + t.reminders;
+    document.getElementById("limitsWho").textContent = t.who_sets + (t.changed ? " The DC Office has changed some of the limits shown below." : "");
     document.getElementById("limitsHonest").textContent = t.note + (a.demo_minutes ? " On this demo site each time limit is shortened to " + a.demo_minutes + " minutes so you can watch it work." : "");
     var lb = document.querySelector("#limitsTable tbody");
     t.rows.forEach(function (row) {
@@ -137,5 +151,6 @@
   });
 })();
 </script>
+<script src="/assets/pwa.js" defer></script>
 </body>
 </html>

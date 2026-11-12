@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>Officer Dashboard - Kalaburagi Grievance Tracker</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0f2a52">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grievance">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<link rel="icon" type="image/png" href="/assets/icon-192.png">
 <link rel="stylesheet" href="/assets/portal.css">
 </head>
 <body>
@@ -19,6 +26,7 @@
       <a href="#complaints" id="topComplaints" class="active">Complaints</a>
       <a href="#notices" id="topNotices">Notices <span class="pill overdue" id="noticeBadge" hidden>0</span></a>
       <a href="#overview" id="topOverview" hidden>District overview</a>
+      <a href="/limits" id="topLimits" hidden>Time limits</a>
       <a href="#detail" id="detailLink" hidden>Selected complaint</a>
     </nav>
     <div class="top-right">
@@ -396,6 +404,7 @@
     $("whoLine").textContent = `${me.level_label} · ${me.field_label}. Your login ends at midnight (India time).`;
     $("overdueBtn").hidden = !me.is_district_head;
     $("topOverview").hidden = !me.is_district_head;
+    $("topLimits").hidden = !me.is_district_head;
     if (me.is_district_head) {
       $("listTitle").textContent = "All complaints (District Head Office)";
       $("numbersTitle").textContent = "All Complaints in Numbers";
@@ -694,5 +703,6 @@
   $("resolveBtn").addEventListener("click", () => runAction("resolve"));
   $("escalateBtn").addEventListener("click", () => runAction("escalate"));
 </script>
+<script src="/assets/pwa.js" defer></script>
 </body>
 </html>

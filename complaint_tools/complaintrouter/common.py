@@ -57,10 +57,34 @@ def charter_filename() -> str:
     return "charter.json" if _district == "chennai" else f"charter_{_district}.json"
 
 
-def load_charter() -> Any:
-    """Load the active district's charter data file."""
+# Time limits set by the District Head Office on the portal's "Time limits" page. They sit on top of the charter
+# file: the file holds the defaults, these replace the numbers they name. Shape:
+#   {"fix_days": {"road_damage": 5}, "matrix": {"standard": {"deputy_ae": 3}}}
+_overrides: dict = {}
+
+
+def set_limit_overrides(overrides: Any) -> None:
+    """Replace the saved time limits (used at start-up and after the DC Office changes one)."""
+    global _overrides  # pylint: disable=global-statement
+    _overrides = overrides if isinstance(overrides, dict) else {}
+
+
+def limit_overrides() -> dict:
+    return json.loads(json.dumps(_overrides))
+
+
+def load_charter(with_overrides: bool = True) -> Any:
+    """Load the active district's charter data file, with any time limits the District Head Office has changed."""
     with open(data_dir() / charter_filename(), encoding="utf-8") as handle:
-        return json.load(handle)
+        charter = json.load(handle)
+    if with_overrides and _overrides and _district != "chennai":
+        for key, days in (_overrides.get("fix_days") or {}).items():
+            if key in charter.get("complaint_types", {}):
+                charter["complaint_types"][key]["fix_days"] = days
+        for ekey, levels in (_overrides.get("matrix") or {}).items():
+            if ekey in charter.get("escalation_matrix", {}):
+                charter["escalation_matrix"][ekey].update(levels)
+    return charter
 
 
 def parse_arg(value: Any, default: Any) -> Any:

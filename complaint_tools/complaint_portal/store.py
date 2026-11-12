@@ -67,6 +67,18 @@ CREATE TABLE IF NOT EXISTS workers (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS limit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at TEXT NOT NULL,
+    by_officer TEXT NOT NULL,
+    what TEXT NOT NULL,
+    old_value TEXT,
+    new_value TEXT
+);
 CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY,
     kind TEXT NOT NULL,
@@ -217,6 +229,28 @@ class Store:
                 self.on_change()
         finally:
             conn.close()
+
+    # Settings (the time limits the District Head Office has changed) and their log
+
+    def get_setting(self, key: str) -> Optional[str]:
+        with self._conn() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else None
+
+    def set_setting(self, key: str, value: str) -> None:
+        with self._conn() as conn:
+            conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+
+    def add_limit_log(self, at: str, by_officer: str, what: str, old_value: Any, new_value: Any) -> None:
+        with self._conn() as conn:
+            conn.execute("INSERT INTO limit_log (at, by_officer, what, old_value, new_value) VALUES (?, ?, ?, ?, ?)",
+                         (at, by_officer, what, None if old_value is None else str(old_value),
+                          None if new_value is None else str(new_value)))
+
+    def list_limit_log(self, limit: int = 30) -> List[Dict[str, Any]]:
+        with self._conn() as conn:
+            rows = conn.execute("SELECT * FROM limit_log ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        return [dict(row) for row in rows]
 
     # Login sessions (so people stay logged in when the host restarts)
 

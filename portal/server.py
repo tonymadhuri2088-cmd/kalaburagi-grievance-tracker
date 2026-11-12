@@ -67,6 +67,7 @@ PAGES = {
     "/worker/signup": HERE / "worker-signup.html",
     "/share": HERE / "share.html",                  # QR code, link, and how to use three devices
     "/about": HERE / "about.html",                  # agents and models, time limits, data
+    "/limits": HERE / "limits.html",                # District Head Office: set the days for each complaint type
 }
 # The shared stylesheet, script and icons. Only these files are served from portal/assets.
 ASSETS = {
@@ -74,7 +75,19 @@ ASSETS = {
     "/assets/portal.js": (HERE / "assets" / "portal.js", "text/javascript; charset=utf-8"),
     "/assets/i18n.js": (HERE / "assets" / "i18n.js", "text/javascript; charset=utf-8"),
     "/assets/icons.svg": (HERE / "assets" / "icons.svg", "image/svg+xml"),
+    "/assets/pwa.js": (HERE / "assets" / "pwa.js", "text/javascript; charset=utf-8"),
+    "/assets/icon-192.png": (HERE / "assets" / "icon-192.png", "image/png"),
+    "/assets/icon-512.png": (HERE / "assets" / "icon-512.png", "image/png"),
+    "/assets/icon-180.png": (HERE / "assets" / "icon-180.png", "image/png"),
+    "/assets/icon-maskable-512.png": (HERE / "assets" / "icon-maskable-512.png", "image/png"),
+    # The service worker must sit at the site root so that it covers every page.
+    "/sw.js": (HERE / "assets" / "sw.js", "text/javascript; charset=utf-8"),
+    "/manifest.webmanifest": (HERE / "assets" / "manifest.webmanifest", "application/manifest+json"),
 }
+OFFLINE_PAGE = ("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+                "<title>Offline</title><body style='font-family:sans-serif;text-align:center;padding:60px 20px;color:#0f2a52'>"
+                "<h1>You are offline</h1><p>The Kalaburagi Grievance Tracker needs the internet to file and track complaints. "
+                "Check your connection and try again.</p><p><a href='/'>Try again</a></p></body>")
 COOKIE_NAME = "portal_session"
 CITIZEN_COOKIE = "citizen_session"
 WORKER_COOKIE = "worker_session"
@@ -120,6 +133,9 @@ class Handler(BaseHTTPRequestHandler):
                 asset, content_type = ASSETS[path]
                 self._send_bytes(200, asset.read_bytes(), content_type)
                 return
+            if path == "/offline":
+                self._send_bytes(200, OFFLINE_PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                return
             if path == "/api/config":
                 self._send_json(200, self.portal.public_config())
                 return
@@ -159,6 +175,10 @@ class Handler(BaseHTTPRequestHandler):
                 officer = self._current_officer()
                 self._send_json(200, self.portal.district_summary(officer))
                 return
+            if path == "/api/district/limits":
+                officer = self._current_officer()
+                self._send_json(200, self.portal.limits_view(officer))
+                return
             if path == "/api/officer/notices":
                 officer = self._current_officer()
                 self._send_json(200, {"notices": self.portal.officer_notices(officer)})
@@ -194,6 +214,10 @@ class Handler(BaseHTTPRequestHandler):
             extra_headers: Dict[str, Any] = {}
             if path == WHATSAPP_PATH:
                 self._whatsapp_message(path)
+                return
+            if path == "/api/district/limits":
+                officer = self._current_officer()
+                self._send_json(200, self.portal.set_limit(officer, self._read_json()))
                 return
             if path == "/api/citizen/match":
                 body = self._read_json()

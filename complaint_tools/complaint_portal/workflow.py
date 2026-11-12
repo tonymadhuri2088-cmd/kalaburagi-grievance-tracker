@@ -22,7 +22,8 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from complaintrouter.common import load_charter
+from complaintrouter import llm_classify
+from complaintrouter.common import limit_overrides, load_charter, set_limit_overrides
 from complaintrouter.pipeline import run_complaint
 from complaint_portal.auth import CODE_MINUTES, OneTimeCodes, hash_password, verify_password
 from complaint_portal.sms import NoSms
@@ -49,6 +50,7 @@ from complaint_portal.rules import (
     stage_path,
     stage_window,
 )
+from complaint_portal import ai_check
 from complaint_portal import messages as texts
 from complaint_portal import router_link
 from complaint_portal.language import detect_language, language_name
@@ -166,6 +168,13 @@ class Portal:
         # WhatsApp: when set (see wa_bot.py), follow-up messages to a citizen who has written to the bot are also
         # sent to their WhatsApp. notifier.deliver(mobile, text) returns the channel used.
         self.notifier: Any = None
+        # Claude's second look at a new complaint (see ai_check.py). Tests replace this with a stub.
+        self.ai_review: Any = ai_check.review
+        # Time limits the District Head Office has changed (kept in the database, on top of the charter file).
+        try:
+            set_limit_overrides(json.loads(store.get_setting("limit_overrides") or "{}"))
+        except (ValueError, sqlite3.Error):
+            set_limit_overrides({})
         self.whatsapp_info: Optional[Dict[str, str]] = None   # {"number", "link"} for the website's chat button
         self._quiet = threading.local()
 
@@ -444,8 +453,20 @@ class Portal:
         else:
             self.store.add_event(cid, iso(now), "system", "unassigned", "No officer is set up for this field at this level yet. Waiting for assignment.")
         filed = self.store.get_complaint(cid)
+        if use_llm and self.ai_review is not None and llm_classify.claude_settings() is not None:
+            label = category_label(kind, category_key) if kind and category_key else charter["complaint_types"][complaint_type]["label"]
+            threading.Thread(target=self._ai_review, args=(cid, complaint, label, list(images)), daemon=True).start()
         self._tell_citizen(filed, now, "citizen_registered", office=owner_label, due=texts.when_text(filed["stage_deadline"]))
         return self._public(filed)
+
+    def _ai_review(self, cid: str, text: str, label: str, images: List[str]) -> None:
+        """Background: add Claude's summary and photo check to the complaint's history. Never raises."""
+        try:
+            result = self.ai_review(text, label, images)
+            if result:
+                self.store.add_event(cid, iso(utcnow()), "ai", "ai_check", ai_check.event_text(result))
+        except Exception:   # the complaint is already saved; the review is an extra
+            pass
 
     def track(self, complaint_id: Any, contact: Any) -> Dict[str, Any]:
         return self._public(self._citizen_row(complaint_id, contact))
@@ -683,6 +704,71 @@ class Portal:
             "kannada_names": load_charter().get("kannada_names", {}),
             "whatsapp": self.whatsapp_info,
         }
+
+    # Time limits: who decides the number of days
+
+    def limits_view(self, officer: Dict[str, Any]) -> Dict[str, Any]:
+        """The days for each complaint type and each escalation level, with the file's default beside them."""
+        if officer["level"] != DISTRICT_HEAD:
+            raise PortalError(403, "Only the District Head Office can see and change the time limits.")
+        now_charter = load_charter()
+        base = load_charter(with_overrides=False)
+        changed = limit_overrides()
+        types = []
+        for key, entry in now_charter["complaint_types"].items():
+            default = base["complaint_types"][key].get("fix_days")
+            types.append({"key": key, "label": entry["label"], "department": now_charter["fields"].get(entry["field"], entry["field"]),
+                          "days": entry.get("fix_days"), "default": default, "changed": key in (changed.get("fix_days") or {}),
+                          "source": base["complaint_types"][key].get("charter_row", "")})
+        levels = []
+        for ekey, ladder in now_charter["escalation_matrix"].items():
+            for stage, days in ladder.items():
+                if stage == "depot":
+                    continue   # the first level uses the complaint type's own days
+                levels.append({"matrix": ekey, "stage": stage, "name": level_name(stage, now_charter), "days": days,
+                               "default": base["escalation_matrix"][ekey][stage],
+                               "changed": stage in ((changed.get("matrix") or {}).get(ekey) or {})})
+        return {"types": types, "levels": levels, "note": base.get("label"), "demo_minutes": self.demo_minutes or 0,
+                "log": self.store.list_limit_log(), "applies_to": "New complaints. A complaint already filed keeps the time limit it was given."}
+
+    def set_limit(self, officer: Dict[str, Any], body: Dict[str, Any], now: Optional[datetime] = None) -> Dict[str, Any]:
+        """The District Head Office changes one time limit (or resets them all). Every change is logged."""
+        if officer["level"] != DISTRICT_HEAD:
+            raise PortalError(403, "Only the District Head Office can change the time limits.")
+        now = now or utcnow()
+        overrides = limit_overrides()
+        base = load_charter(with_overrides=False)
+        current = load_charter()
+        who = officer["username"]
+        if body.get("reset") is True:
+            self.store.set_setting("limit_overrides", "{}")
+            set_limit_overrides({})
+            self.store.add_limit_log(iso(now), who, "All time limits reset to the charter file", None, None)
+            return self.limits_view(officer)
+        days = body.get("days")
+        if isinstance(days, bool) or not isinstance(days, int) or not 1 <= days <= 60:
+            raise PortalError(400, "Days must be a whole number from 1 to 60.")
+        if body.get("type") is not None:
+            key = body["type"]
+            if key not in base["complaint_types"]:
+                raise PortalError(404, "Unknown complaint type.")
+            old = current["complaint_types"][key].get("fix_days")
+            overrides.setdefault("fix_days", {})[key] = days
+            what = f"{base['complaint_types'][key]['label']}: first-level days"
+        elif body.get("matrix") is not None and body.get("stage") is not None:
+            ekey, stage = body["matrix"], body["stage"]
+            if ekey not in base["escalation_matrix"] or stage not in base["escalation_matrix"][ekey] or stage == "depot":
+                raise PortalError(404, "Unknown escalation level.")
+            old = current["escalation_matrix"][ekey][stage]
+            overrides.setdefault("matrix", {}).setdefault(ekey, {})[stage] = days
+            what = f"{ekey} complaints, {level_name(stage, base)}: days"
+        else:
+            raise PortalError(400, "Say which time limit to change.")
+        if old != days:
+            self.store.add_limit_log(iso(now), who, what, old, days)
+        self.store.set_setting("limit_overrides", json.dumps(overrides))
+        set_limit_overrides(overrides)
+        return self.limits_view(officer)
 
     # The DC Office's view of the whole district
 
@@ -982,7 +1068,8 @@ class Portal:
             **self._shown_completion_code(row, now),
             "can_confirm": row["status"] == AWAITING,
             "awaiting_code": row["status"] == AWAITING and self.codes.pending(_confirm_key(row["id"]), now),
-            "events": [{"at": event["at"], "message": event["message"]} for event in self.store.get_events(row["id"])],
+            "events": [{"at": event["at"], "message": event["message"]} for event in self.store.get_events(row["id"])
+                       if event["kind"] != "ai_check"],   # the officer's AI note is not for the citizen's page
             "language": row.get("language") or "en",
             "follow_up_due": row["stage_deadline"],
             "police_notice": charter["complaint_types"].get(row["complaint_type"], {}).get("notice") or None,
