@@ -39,10 +39,23 @@
   </div>
 </header>
 
+<div class="install-bar" id="installBar" hidden data-install-bar>
+  <div class="container">
+    <div class="ib-text"><b>Install this app on your phone</b>It opens full screen with its own icon. Nothing to download from a store.</div>
+    <button type="button" class="btn light" data-install-now>Install app</button>
+    <button type="button" class="ib-close" data-install-close aria-label="Close">&times;</button>
+    <p class="ib-hint" id="installHint" hidden></p>
+  </div>
+</div>
+
 <section class="hero landing-hero">
   <svg class="hero-skyline" aria-hidden="true"><use href="/assets/icons.svg#skyline"/></svg>
   <div class="container landing-grid">
     <div class="hero-text">
+      <div class="lang-pills" role="group" aria-label="Language" data-no-i18n>
+        <button type="button" data-set-lang="en" aria-pressed="true">English</button>
+        <button type="button" data-set-lang="kn" aria-pressed="false">ಕನ್ನಡ</button>
+      </div>
       <h1><span id="h1a">Every Complaint Followed Up</span> <br class="wide-only"><span id="h1b">for Every Taluk in <span class="sky">Kalaburagi</span></span></h1>
       <p class="lead" id="lead">Report water, road, health, sanitation and police problems. Follow every step and get reminders until it is resolved. Sign up once, then log in with your mobile number.</p>
       <div class="chips">
@@ -441,6 +454,19 @@
   let saved = "en";
   try { saved = localStorage.getItem("portal_lang") || "en"; } catch (err) { saved = "en"; }
   setLanguage(saved);
+</script>
+<script>
+(function () {
+  var select = document.getElementById("lang");
+  var pills = document.querySelectorAll("[data-set-lang]");
+  function sync() { pills.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-set-lang") === select.value)); }); }
+  pills.forEach(function (b) {
+    b.addEventListener("click", function () { select.value = b.getAttribute("data-set-lang"); select.dispatchEvent(new Event("change", { bubbles: true })); sync(); });
+  });
+  select.addEventListener("change", sync);
+  window.addEventListener("portal-lang", sync);
+  setTimeout(sync, 0); setTimeout(sync, 400);
+})();
 </script>
 <script src="/assets/pwa.js" defer></script>
 </body>

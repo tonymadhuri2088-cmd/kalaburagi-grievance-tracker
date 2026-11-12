@@ -250,3 +250,11 @@ def test_the_limits_api_needs_a_district_head_login(server):
         urllib.request.urlopen(request, timeout=10)
     assert error.value.code == 401
     assert fetch(server + "/limits")[0] == 200
+
+
+def test_the_first_page_has_the_install_bar_and_a_visible_language_switch(server):
+    html = fetch(server + "/")[2].decode("utf-8")
+    assert "data-install-bar" in html and "data-install-now" in html
+    assert 'data-set-lang="en"' in html and 'data-set-lang="kn"' in html
+    kannada = (ROOT / "portal" / "assets" / "i18n.js").read_text(encoding="utf-8")
+    assert '"Install this app on your phone"' in kannada

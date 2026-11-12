@@ -41,5 +41,30 @@
     document.querySelectorAll("[data-native-share]").forEach(function (b) { b.hidden = true; });
   });
 
-  document.addEventListener("DOMContentLoaded", setButtons);
+  // The install bar on the first screen: shown to anyone who has not installed the app, until they close it.
+  function barSetup() {
+    var bar = document.querySelector("[data-install-bar]");
+    if (!bar) return;
+    var closed = false;
+    try { closed = sessionStorage.getItem("kgt_install_closed") === "1"; } catch (e) { closed = false; }
+    bar.hidden = standalone || closed;
+    var hint = document.getElementById("installHint");
+    var go = bar.querySelector("[data-install-now]");
+    if (go) go.addEventListener("click", function () {
+      if (deferred) { deferred.prompt(); deferred.userChoice.finally(function () { deferred = null; }); return; }
+      if (hint) {
+        hint.hidden = false;
+        hint.textContent = isIos ? "On iPhone: tap the Share icon in Safari, then Add to Home Screen."
+          : "In Chrome: tap the menu (three dots), then Install app or Add to Home screen.";
+      }
+    });
+    var close = bar.querySelector("[data-install-close]");
+    if (close) close.addEventListener("click", function () {
+      bar.hidden = true;
+      try { sessionStorage.setItem("kgt_install_closed", "1"); } catch (e) { /* shown again next visit */ }
+    });
+    window.addEventListener("appinstalled", function () { bar.hidden = true; });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () { setButtons(); barSetup(); });
 })();

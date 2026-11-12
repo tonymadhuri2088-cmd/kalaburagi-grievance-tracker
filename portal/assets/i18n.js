@@ -18,6 +18,13 @@
       "ಅಭಿನವ್ ರೆಡ್ಡಿ ಮತ್ತು ಟೋನಿ ಮಧುರಿ ರಚಿಸಿದ್ದಾರೆ. ಸಾಲ್ವಥಾನ್ 2026ಕ್ಕಾಗಿ ವಿದ್ಯಾರ್ಥಿ ಮಾದರಿ. ಇದು ಅಧಿಕೃತ ಸರ್ಕಾರಿ ವ್ಯವಸ್ಥೆಯಲ್ಲ.",
     "Unofficial demo": "ಅನಧಿಕೃತ ಡೆಮೊ",
     "Language": "ಭಾಷೆ",
+    "Install this app on your phone": "ಈ ಆ್ಯಪ್ ಅನ್ನು ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ",
+    "It opens full screen with its own icon. Nothing to download from a store.": "ಇದು ತನ್ನದೇ ಐಕಾನ್‌ನೊಂದಿಗೆ ಪೂರ್ಣ ಪರದೆಯಲ್ಲಿ ತೆರೆಯುತ್ತದೆ. ಸ್ಟೋರ್‌ನಿಂದ ಏನನ್ನೂ ಡೌನ್‌ಲೋಡ್ ಮಾಡಬೇಕಿಲ್ಲ.",
+    "Install app": "ಆ್ಯಪ್ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ",
+    "How it works": "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
+    "Open on your phone": "ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ",
+    "In Chrome: tap the menu (three dots), then Install app or Add to Home screen.": "ಕ್ರೋಮ್‌ನಲ್ಲಿ: ಮೆನು (ಮೂರು ಚುಕ್ಕೆಗಳು) ಒತ್ತಿ, ನಂತರ ಆ್ಯಪ್ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ ಅಥವಾ ಹೋಮ್ ಸ್ಕ್ರೀನ್‌ಗೆ ಸೇರಿಸಿ ಒತ್ತಿ.",
+    "On iPhone: tap the Share icon in Safari, then Add to Home Screen.": "ಐಫೋನ್‌ನಲ್ಲಿ: ಸಫಾರಿಯಲ್ಲಿ ಶೇರ್ ಐಕಾನ್ ಒತ್ತಿ, ನಂತರ ಹೋಮ್ ಸ್ಕ್ರೀನ್‌ಗೆ ಸೇರಿಸಿ ಒತ್ತಿ.",
 
     // Menus
     "Main": "ಮುಖ್ಯ",

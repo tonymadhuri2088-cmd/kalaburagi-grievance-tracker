@@ -716,3 +716,15 @@ html[lang="kn"] .brand-tag { font-size: 11px; }
 .bar .bar-late { background: #d4401a; display: block; height: 100%; }
 .file-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; }
 .file-list a { color: var(--primary); font-weight: 600; }
+
+/* Install-as-an-app bar and the big language switch on the first screen */
+.install-bar { background: var(--navy); color: var(--white); }
+.install-bar .container { display: flex; align-items: center; gap: 14px; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; }
+.install-bar .ib-text { flex: 1 1 260px; font-size: 15px; }
+.install-bar .ib-text b { display: block; }
+.install-bar .ib-hint { flex-basis: 100%; font-size: 13.5px; color: var(--banner-sub); margin: 0; }
+.install-bar .btn { white-space: nowrap; }
+.install-bar .ib-close { background: transparent; border: 0; color: var(--white); font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 8px; }
+.lang-pills { display: inline-flex; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 4px; gap: 4px; margin: 0 0 18px; }
+.lang-pills button { border: 0; background: transparent; color: var(--white); font-size: 16px; font-weight: 700; padding: 7px 20px; border-radius: 999px; cursor: pointer; }
+.lang-pills button[aria-pressed="true"] { background: var(--white); color: var(--navy); }
