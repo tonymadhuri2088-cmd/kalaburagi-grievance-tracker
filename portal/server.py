@@ -18,6 +18,7 @@ Set up officer accounts first with portal/manage.py (see the README).
 """
 
 import argparse
+import hmac
 import json
 import mimetypes
 import os
@@ -225,8 +226,19 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, self.portal.set_limit(officer, self._read_json()))
                 return
             if path == "/api/district/reset-demo":
+                body = self._read_json()
+                # Allowed with the demo password (the one set as DEMO_PASSWORD on the host), or when logged in as the
+                # District Head Office. A wrong password is refused, and slowed down.
+                if "password" in body:
+                    expected = os.environ.get("DEMO_PASSWORD") or ""
+                    supplied = body.get("password")
+                    if not (isinstance(supplied, str) and expected and hmac.compare_digest(supplied.encode(), expected.encode())):
+                        time.sleep(1)
+                        raise PortalError(403, "That is not the demo password.")
+                    self._send_json(200, self.portal.reset_demo(None, body))
+                    return
                 officer = self._current_officer()
-                self._send_json(200, self.portal.reset_demo(officer, self._read_json()))
+                self._send_json(200, self.portal.reset_demo(officer, body))
                 return
             if path == "/api/citizen/match":
                 body = self._read_json()

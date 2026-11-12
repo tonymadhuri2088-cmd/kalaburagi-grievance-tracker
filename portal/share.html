@@ -137,11 +137,10 @@
 
   <section class="pad noprint" style="padding-bottom:40px">
     <h2 style="color:var(--navy);margin:0 0 10px">Start fresh before the demo</h2>
-    <p class="muted-note">Removes every complaint, citizen and worker (with their photos and logins) so you present from an empty system. Officer accounts and time limits stay. Only the DC Office login (<b>district.head</b>) can do this: log in as that officer on this browser first.</p>
+    <p class="muted-note">Removes every complaint, citizen and worker (with their photos and logins) so you present from an empty system. Officer accounts and time limits stay. It asks for the demo password first.</p>
     <p style="margin:12px 0 0"><button type="button" class="btn outline" id="freshBtn">Remove all complaints, citizens and workers</button></p>
     <div class="ok" id="freshOk" hidden></div>
     <div class="note" id="freshErr" hidden></div>
-    <p id="freshLogin" hidden style="margin-top:10px"><a class="btn" href="/?switch=1&amp;tab=officer">Log in as district.head</a></p>
   </section>
 </main>
 <script>
@@ -175,15 +174,16 @@
   }).catch(function () { setText("mainLink", location.host); });
 
   document.getElementById("freshBtn").addEventListener("click", async function () {
-    var ok = document.getElementById("freshOk"), err = document.getElementById("freshErr"), login = document.getElementById("freshLogin");
-    ok.hidden = err.hidden = login.hidden = true;
+    var ok = document.getElementById("freshOk"), err = document.getElementById("freshErr");
+    ok.hidden = err.hidden = true;
+    var password = prompt("Enter the demo password to continue.");
+    if (!password) return;
     var typed = prompt("This removes ALL complaints, citizens and workers. Type RESET to confirm.");
     if (typed !== "RESET") return;
     try {
       var res = await fetch("/api/district/reset-demo", { method: "POST", credentials: "same-origin",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "RESET" }) });
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "RESET", password: password }) });
       var data = {}; try { data = await res.json(); } catch (e) {}
-      if (res.status === 401) { err.textContent = "Log in as district.head first, then come back and press the button."; err.hidden = false; login.hidden = false; return; }
       if (!res.ok) { err.textContent = data.error || "Could not start fresh."; err.hidden = false; return; }
       ok.textContent = "Done. Removed " + data.removed.complaints + " complaints, " + data.removed.citizens + " citizens and " + data.removed.workers + " workers.";
       ok.hidden = false;

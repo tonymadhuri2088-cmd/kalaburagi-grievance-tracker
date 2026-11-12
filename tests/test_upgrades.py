@@ -367,3 +367,22 @@ def test_the_share_page_has_the_start_fresh_button_but_the_server_still_needs_th
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(request, timeout=10)
     assert error.value.code == 401          # a visitor who is not logged in cannot wipe anything
+
+
+def test_the_demo_password_can_start_fresh_without_an_officer_login(server, monkeypatch):
+    monkeypatch.setenv("DEMO_PASSWORD", "the-demo-password")
+    def attempt(password):
+        request = urllib.request.Request(server + "/api/district/reset-demo",
+                                         data=json.dumps({"confirm": "RESET", "password": password}).encode(),
+                                         headers={"Content-Type": "application/json"}, method="POST")
+        return urllib.request.urlopen(request, timeout=10)
+    with pytest.raises(urllib.error.HTTPError) as wrong:
+        attempt("guess")
+    assert wrong.value.code == 403
+    with pytest.raises(urllib.error.HTTPError) as empty:
+        attempt("")
+    assert empty.value.code == 403
+    good = json.loads(attempt("the-demo-password").read())
+    assert good["removed"] == {"complaints": 0, "citizens": 0, "workers": 0}
+    html = fetch(server + "/share")[2].decode("utf-8")
+    assert "Only the DC Office login" not in html and "demo password" in html
