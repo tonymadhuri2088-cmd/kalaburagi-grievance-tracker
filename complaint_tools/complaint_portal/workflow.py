@@ -1178,8 +1178,9 @@ class Portal:
     def officer_notices(self, officer: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Notices for this officer: complaints that passed their time limit, plus every complaint a worker rejected.
 
-        Every officer sees every rejection, so nothing given back by a worker is missed. Time-limit notices only go to
-        the officer they were sent to. The District Head Office sees every notice.
+        Every officer sees every rejection and every time-limit (late complaint) notice, so nothing that has gone past
+        its limit or been given back by a worker is missed. Reminders only go to the officer they were sent to. The
+        District Head Office sees every notice.
         """
         if officer["level"] == DISTRICT_HEAD:
             rows = self.store.list_notices(None)
@@ -1187,7 +1188,7 @@ class Portal:
             rows = self.store.list_notices(officer["id"])
             seen = {row["id"] for row in rows}
             for row in self.store.list_notices(None, limit=500):
-                if row["id"] not in seen and json.loads(row["payload"]).get("kind") == "rejected":
+                if row["id"] not in seen and json.loads(row["payload"]).get("kind") != "reminder":
                     rows.append(row)
             rows.sort(key=lambda row: row["id"], reverse=True)
         notices = []

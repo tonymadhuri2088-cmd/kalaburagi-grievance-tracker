@@ -389,3 +389,14 @@ def test_the_demo_password_can_start_fresh_without_an_officer_login(server, monk
     assert good["removed"] == {"complaints": 0, "citizens": 0, "workers": 0}
     html = fetch(server + "/share")[2].decode("utf-8")
     assert "Only the DC Office login" not in html and 'id="freshSection"' in html and 'id="freshSection" hidden' not in html
+
+
+def test_every_officer_sees_the_late_complaint_notices(desk):
+    view = desk.register("Ravi Kumar", PHONE, "water pipe is leaking badly", ward_number=12, use_llm=False, now=NOW,
+                         address="Station Road", kind="civic", category="water_supply")
+    desk.check_overdue(NOW + timedelta(days=10))
+    roads_officer = desk.store.find_officer("roads", "depot", None) or next(
+        o for o in desk.store.list_officers() if o["username"] == "roads.depot")
+    seen = [n for n in desk.officer_notices(roads_officer) if n["complaint_id"] == view["id"]]
+    assert seen, "an officer from another department still sees the time-limit notice"
+    assert not [n for n in seen if n.get("kind") == "reminder"]
