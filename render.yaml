@@ -24,8 +24,9 @@ services:
         sync: false
       - key: SEED_SAMPLE
         value: "0"
+      # 0 = real charter days. Set to 3 to make every time limit 3 minutes so escalation can be shown live.
       - key: COMPLAINT_PORTAL_DEMO_MINUTES
-        value: "3"
+        value: "0"
       # WhatsApp (optional): add these in the Render dashboard, never in this file.
       # WHATSAPP_PROVIDER=twilio, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM=+14155238886,
       # PUBLIC_URL=https://<your service>.onrender.com, WHATSAPP_JOIN_TEXT=join <your sandbox word>,
